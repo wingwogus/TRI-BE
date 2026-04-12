@@ -20,3 +20,12 @@ chat:
 tribe:
   auth:
     enabled: true
+  community:
+    image:
+      enabled: true
+  itinerary:
+    place-search:
+      enabled: true
+  trip:
+    review:
+      enabled: true

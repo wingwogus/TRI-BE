@@ -1,14 +1,17 @@
 package com.tribe.domain.member
 
+import com.tribe.domain.trip.TripMember
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.OneToMany
 
 @Entity
 class Member(
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "member_id")
     val id: Long = 0L,
 
     @Column(nullable = false, unique = true)
@@ -35,6 +38,9 @@ class Member(
     @Column(nullable = false)
     var role: String = ROLE_USER,
 ) {
+    @OneToMany(mappedBy = "member")
+    val tripMembers: MutableList<TripMember> = mutableListOf()
+
     fun linkOAuthAccount(
         provider: String,
         providerId: String,

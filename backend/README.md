@@ -36,10 +36,14 @@ Replace it with your actual DB (MySQL/PostgreSQL/etc)
 src/main/resources/application-local.yml:
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/your_db
-    username: your_user
-    password: your_password
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:h2:mem:tribe-local;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+Local profile now boots against an embedded H2 database by default.
+Override `SPRING_DATASOURCE_*` only when you want to point local at MySQL/PostgreSQL instead.
+Local also uses `spring.jpa.hibernate.ddl-auto=create` by default, so the schema is recreated from entities on every startup.
 
 3️⃣ Replace JWT Secret Key
 A sample secret is included.
@@ -71,4 +75,3 @@ Runs with the application-local profile by default.
 
 ⭐ Official Method: Gradle bootRun
 ./gradlew :api:bootRun
-

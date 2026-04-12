@@ -1,3 +1,15 @@
 tribe:
   auth:
     enabled: false
+  community:
+    image:
+      enabled: false
+  itinerary:
+    place-search:
+      enabled: false
+  trip:
+    review:
+      enabled: false
+
+app:
+  url: http://localhost:3000

@@ -11,8 +11,6 @@ spring:
     properties:
       hibernate:
         format_sql: false
-  flyway:
-    enabled: false
   mail:
     host: smtp.gmail.com
     port: 587
@@ -66,6 +64,18 @@ app:
       secure: false
       same-site: Lax
 
+cloudinary:
+  url: cloudinary://test:test@test
+
+google:
+  maps:
+    key: test-google-key
+
+gemini:
+  api:
+    key: test-gemini-key
+    url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
+
 chat:
   redis:
     enabled: false
@@ -73,3 +83,12 @@ chat:
 tribe:
   auth:
     enabled: true
+  community:
+    image:
+      enabled: true
+  itinerary:
+    place-search:
+      enabled: true
+  trip:
+    review:
+      enabled: true

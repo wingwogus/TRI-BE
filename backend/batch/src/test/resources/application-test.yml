@@ -8,8 +8,6 @@ spring:
     hibernate:
       ddl-auto: create-drop
     open-in-view: false
-  flyway:
-    enabled: false
   mail:
     host: smtp.gmail.com
     port: 587
@@ -48,3 +46,15 @@ chat:
 tribe:
   auth:
     enabled: false
+  community:
+    image:
+      enabled: false
+  itinerary:
+    place-search:
+      enabled: false
+  trip:
+    review:
+      enabled: false
+
+app:
+  url: http://localhost:3000
