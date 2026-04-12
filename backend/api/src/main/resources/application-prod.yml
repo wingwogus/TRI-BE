@@ -64,11 +64,6 @@ spring:
 jwt:
   secret: ${PROD_JWT_SECRET}
 
-redis:
-  host: ${REDIS_HOST}
-  port: ${REDIS_PORT}
-  db: ${REDIS_DB:0}
-
 app:
   mail:
     from-name: ${PROD_MAIL_FROM_NAME:Tribe}

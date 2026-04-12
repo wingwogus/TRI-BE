@@ -71,11 +71,6 @@ spring:
 jwt:
   secret: t2oRk29vBQZWS8GEt4xr8AJznlPK0ipBKUwdyqe10SOGZB26vVBMjzqualdJsjcOY1wX9DOqJC9V1DFl58F0tQ==
 
-redis:
-  host: ${REDIS_HOST:localhost}
-  port: ${REDIS_PORT:6379}
-  db: ${REDIS_DB:0}
-
 app:
   mail:
     from-name: ${MAIL_FROM_NAME:Tribe}
@@ -114,8 +109,8 @@ feign:
 
 chat:
   redis:
-    enabled: false
+    enabled: true
 
 trip:
   realtime:
-    enabled: false
+    enabled: true
