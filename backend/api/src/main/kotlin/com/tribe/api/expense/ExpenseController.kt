@@ -1,15 +1,9 @@
 package com.tribe.api.expense
 
 import com.tribe.api.common.ApiResponse
-import com.tribe.application.expense.AssignExpenseParticipantsUseCase
-import com.tribe.application.expense.ClearExpenseAssignmentsUseCase
-import com.tribe.application.expense.CreateExpenseUseCase
-import com.tribe.application.expense.DeleteExpenseUseCase
 import com.tribe.application.expense.ExpenseCommand
 import com.tribe.application.expense.ExpenseQuery
-import com.tribe.application.expense.GetExpenseDetailUseCase
-import com.tribe.application.expense.ListExpensesUseCase
-import com.tribe.application.expense.UpdateExpenseUseCase
+import com.tribe.application.expense.ExpenseService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -30,13 +24,7 @@ import org.springframework.web.multipart.MultipartFile
 @RestController
 @RequestMapping("/api/v1/trips/{tripId}/expenses")
 class ExpenseController(
-    private val createExpenseUseCase: CreateExpenseUseCase,
-    private val listExpensesUseCase: ListExpensesUseCase,
-    private val getExpenseDetailUseCase: GetExpenseDetailUseCase,
-    private val updateExpenseUseCase: UpdateExpenseUseCase,
-    private val assignExpenseParticipantsUseCase: AssignExpenseParticipantsUseCase,
-    private val clearExpenseAssignmentsUseCase: ClearExpenseAssignmentsUseCase,
-    private val deleteExpenseUseCase: DeleteExpenseUseCase,
+    private val expenseService: ExpenseService,
 ) {
     @PostMapping(consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     fun createExpense(
@@ -44,7 +32,7 @@ class ExpenseController(
         @Valid @RequestPart("request") request: ExpenseRequests.CreateRequest,
         @RequestPart(value = "image", required = false) imageFile: MultipartFile?,
     ): ResponseEntity<ApiResponse<ExpenseResponses.ExpenseDetailResponse>> {
-        val result = createExpenseUseCase.createExpense(request.toCreateCommand(tripId, imageFile))
+        val result = expenseService.createExpense(request.toCreateCommand(tripId, imageFile))
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.ok(ExpenseResponses.ExpenseDetailResponse.from(result)))
     }
@@ -53,7 +41,7 @@ class ExpenseController(
     fun listExpenses(
         @PathVariable tripId: Long,
     ): ResponseEntity<ApiResponse<List<ExpenseResponses.ExpenseSummaryResponse>>> {
-        val result = listExpensesUseCase.listExpenses(ExpenseQuery.ListByTrip(tripId))
+        val result = expenseService.listExpenses(ExpenseQuery.ListByTrip(tripId))
         return ResponseEntity.ok(ApiResponse.ok(result.map(ExpenseResponses.ExpenseSummaryResponse::from)))
     }
 
@@ -62,7 +50,7 @@ class ExpenseController(
         @PathVariable tripId: Long,
         @PathVariable expenseId: Long,
     ): ResponseEntity<ApiResponse<ExpenseResponses.ExpenseDetailResponse>> {
-        val result = getExpenseDetailUseCase.getExpenseDetail(ExpenseQuery.GetDetail(tripId, expenseId))
+        val result = expenseService.getExpenseDetail(ExpenseQuery.GetDetail(tripId, expenseId))
         return ResponseEntity.ok(ApiResponse.ok(ExpenseResponses.ExpenseDetailResponse.from(result)))
     }
 
@@ -72,7 +60,7 @@ class ExpenseController(
         @PathVariable expenseId: Long,
         @Valid @RequestBody request: ExpenseRequests.UpdateRequest,
     ): ResponseEntity<ApiResponse<ExpenseResponses.ExpenseDetailResponse>> {
-        val result = updateExpenseUseCase.updateExpense(request.toUpdateCommand(tripId, expenseId))
+        val result = expenseService.updateExpense(request.toUpdateCommand(tripId, expenseId))
         return ResponseEntity.ok(ApiResponse.ok(ExpenseResponses.ExpenseDetailResponse.from(result)))
     }
 
@@ -82,7 +70,7 @@ class ExpenseController(
         @PathVariable expenseId: Long,
         @Valid @RequestBody request: ExpenseRequests.AssignParticipantsRequest,
     ): ResponseEntity<ApiResponse<ExpenseResponses.ExpenseDetailResponse>> {
-        val result = assignExpenseParticipantsUseCase.assignParticipants(
+        val result = expenseService.assignParticipants(
             ExpenseCommand.AssignParticipants(
                 tripId = tripId,
                 expenseId = expenseId,
@@ -103,7 +91,7 @@ class ExpenseController(
         @PathVariable expenseId: Long,
         @Valid @RequestBody request: ExpenseRequests.ClearAssignmentsRequest,
     ): ResponseEntity<ApiResponse<ExpenseResponses.ExpenseDetailResponse>> {
-        val result = clearExpenseAssignmentsUseCase.clearAssignments(
+        val result = expenseService.clearAssignments(
             ExpenseCommand.ClearAssignments(
                 tripId = tripId,
                 expenseId = expenseId,
@@ -118,7 +106,7 @@ class ExpenseController(
         @PathVariable tripId: Long,
         @PathVariable expenseId: Long,
     ): ResponseEntity<ApiResponse<Unit>> {
-        deleteExpenseUseCase.deleteExpense(ExpenseCommand.Delete(tripId, expenseId))
+        expenseService.deleteExpense(ExpenseCommand.Delete(tripId, expenseId))
         return ResponseEntity.ok(ApiResponse.empty(Unit))
     }
 

@@ -28,15 +28,9 @@ class ExpenseService(
     private val itineraryItemRepository: ItineraryItemRepository,
     private val expenseReceiptAnalyzer: ExpenseReceiptAnalyzer,
     private val expenseReceiptStorage: ExpenseReceiptStorage,
-) : CreateExpenseUseCase,
-    ListExpensesUseCase,
-    GetExpenseDetailUseCase,
-    UpdateExpenseUseCase,
-    AssignExpenseParticipantsUseCase,
-    ClearExpenseAssignmentsUseCase,
-    DeleteExpenseUseCase {
+) {
 
-    override fun createExpense(command: ExpenseCommand.Create): ExpenseResult.Detail {
+    fun createExpense(command: ExpenseCommand.Create): ExpenseResult.Detail {
         val actorMembership = expenseAuthorizationPolicy.requireMembership(command.tripId)
         val trip = actorMembership.trip
         val payer = resolveTripMember(trip, command.payerTripMemberId)
@@ -85,21 +79,21 @@ class ExpenseService(
     }
 
     @Transactional(readOnly = true)
-    override fun listExpenses(query: ExpenseQuery.ListByTrip): List<ExpenseResult.Summary> {
+    fun listExpenses(query: ExpenseQuery.ListByTrip): List<ExpenseResult.Summary> {
         expenseAuthorizationPolicy.requireMembership(query.tripId)
         return expenseRepository.findAllWithDetailsByTripId(query.tripId)
             .map(ExpenseResult.Summary::from)
     }
 
     @Transactional(readOnly = true)
-    override fun getExpenseDetail(query: ExpenseQuery.GetDetail): ExpenseResult.Detail {
+    fun getExpenseDetail(query: ExpenseQuery.GetDetail): ExpenseResult.Detail {
         expenseAuthorizationPolicy.requireMembership(query.tripId)
         val expense = findExpense(query.expenseId)
         ensureTripMatch(expense, query.tripId)
         return ExpenseResult.Detail.from(expense)
     }
 
-    override fun updateExpense(command: ExpenseCommand.Update): ExpenseResult.Detail {
+    fun updateExpense(command: ExpenseCommand.Update): ExpenseResult.Detail {
         val expense = findExpense(command.expenseId)
         ensureTripMatch(expense, command.tripId)
         expenseAuthorizationPolicy.requireModificationAccess(expense)
@@ -123,7 +117,7 @@ class ExpenseService(
         return ExpenseResult.Detail.from(expense)
     }
 
-    override fun assignParticipants(command: ExpenseCommand.AssignParticipants): ExpenseResult.Detail {
+    fun assignParticipants(command: ExpenseCommand.AssignParticipants): ExpenseResult.Detail {
         val expense = findExpense(command.expenseId)
         ensureTripMatch(expense, command.tripId)
         expenseAuthorizationPolicy.requireModificationAccess(expense)
@@ -157,7 +151,7 @@ class ExpenseService(
         return ExpenseResult.Detail.from(expense)
     }
 
-    override fun clearAssignments(command: ExpenseCommand.ClearAssignments): ExpenseResult.Detail {
+    fun clearAssignments(command: ExpenseCommand.ClearAssignments): ExpenseResult.Detail {
         val expense = findExpense(command.expenseId)
         ensureTripMatch(expense, command.tripId)
         expenseAuthorizationPolicy.requireModificationAccess(expense)
@@ -171,7 +165,7 @@ class ExpenseService(
         return ExpenseResult.Detail.from(expense)
     }
 
-    override fun deleteExpense(command: ExpenseCommand.Delete) {
+    fun deleteExpense(command: ExpenseCommand.Delete) {
         val expense = findExpense(command.expenseId)
         ensureTripMatch(expense, command.tripId)
         expenseAuthorizationPolicy.requireModificationAccess(expense)

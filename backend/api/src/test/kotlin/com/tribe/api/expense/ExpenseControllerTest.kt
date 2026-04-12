@@ -1,16 +1,10 @@
 package com.tribe.api.expense
 
 import com.tribe.api.exception.GlobalExceptionHandler
-import com.tribe.application.expense.AssignExpenseParticipantsUseCase
-import com.tribe.application.expense.ClearExpenseAssignmentsUseCase
-import com.tribe.application.expense.CreateExpenseUseCase
-import com.tribe.application.expense.DeleteExpenseUseCase
 import com.tribe.application.expense.ExpenseCommand
 import com.tribe.application.expense.ExpenseQuery
 import com.tribe.application.expense.ExpenseResult
-import com.tribe.application.expense.GetExpenseDetailUseCase
-import com.tribe.application.expense.ListExpensesUseCase
-import com.tribe.application.expense.UpdateExpenseUseCase
+import com.tribe.application.expense.ExpenseService
 import com.tribe.application.security.TokenProvider
 import org.hamcrest.Matchers.equalTo
 import org.junit.jupiter.api.Test
@@ -38,19 +32,13 @@ import java.time.LocalDate
 class ExpenseControllerTest(
     @Autowired private val mockMvc: MockMvc,
 ) {
-    @MockBean private lateinit var createExpenseUseCase: CreateExpenseUseCase
-    @MockBean private lateinit var listExpensesUseCase: ListExpensesUseCase
-    @MockBean private lateinit var getExpenseDetailUseCase: GetExpenseDetailUseCase
-    @MockBean private lateinit var updateExpenseUseCase: UpdateExpenseUseCase
-    @MockBean private lateinit var assignExpenseParticipantsUseCase: AssignExpenseParticipantsUseCase
-    @MockBean private lateinit var clearExpenseAssignmentsUseCase: ClearExpenseAssignmentsUseCase
-    @MockBean private lateinit var deleteExpenseUseCase: DeleteExpenseUseCase
+    @MockBean private lateinit var expenseService: ExpenseService
     @MockBean private lateinit var tokenProvider: TokenProvider
 
     @Test
     fun `createExpense returns created payload`() {
         `when`(
-            createExpenseUseCase.createExpense(
+            expenseService.createExpense(
                 ExpenseCommand.Create(
                     tripId = 5L,
                     title = "Dinner",
@@ -136,7 +124,7 @@ class ExpenseControllerTest(
     @Test
     fun `assignParticipants returns updated detail`() {
         `when`(
-            assignExpenseParticipantsUseCase.assignParticipants(
+            expenseService.assignParticipants(
                 ExpenseCommand.AssignParticipants(
                     tripId = 5L,
                     expenseId = 3L,
@@ -158,7 +146,7 @@ class ExpenseControllerTest(
 
     @Test
     fun `listExpenses returns summary collection`() {
-        `when`(listExpensesUseCase.listExpenses(ExpenseQuery.ListByTrip(5L))).thenReturn(
+        `when`(expenseService.listExpenses(ExpenseQuery.ListByTrip(5L))).thenReturn(
             listOf(
                 ExpenseResult.Summary(
                     expenseId = 1L,
