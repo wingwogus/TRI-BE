@@ -10,4 +10,14 @@ interface ItineraryItemRepository : JpaRepository<ItineraryItem, Long> {
 
     @Query("select i from ItineraryItem i join i.category c where i.id in :itemIds and c.trip.id = :tripId")
     fun findByIdInAndTripId(@Param("itemIds") itemIds: List<Long>, @Param("tripId") tripId: Long): List<ItineraryItem>
+
+    @Query(
+        """
+        select i from ItineraryItem i
+        join i.category c
+        where c.trip.id = :tripId
+        order by c.day asc, c.order asc, i.order asc
+        """
+    )
+    fun findByTripIdOrderByCategoryAndOrder(@Param("tripId") tripId: Long): List<ItineraryItem>
 }

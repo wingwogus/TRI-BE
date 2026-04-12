@@ -115,3 +115,7 @@ feign:
 chat:
   redis:
     enabled: false
+
+trip:
+  realtime:
+    enabled: false

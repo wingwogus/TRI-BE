@@ -17,9 +17,15 @@ chat:
   redis:
     enabled: true
 
+trip:
+  realtime:
+    enabled: true
+
 tribe:
   auth:
     enabled: true
+  seed:
+    enabled: ${TRIBE_SEED_ENABLED:false}
   community:
     image:
       enabled: true

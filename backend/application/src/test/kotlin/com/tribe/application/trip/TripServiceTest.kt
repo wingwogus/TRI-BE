@@ -1,10 +1,8 @@
 package com.tribe.application.trip
 
-import com.tribe.application.exception.ErrorCode
-import com.tribe.application.exception.business.BusinessException
 import com.tribe.application.redis.TripInvitationRepository
 import com.tribe.application.security.CurrentActor
-import com.tribe.application.trip.TripAuthorizationPolicy
+import com.tribe.application.trip.event.TripRealtimeEventPublisher
 import com.tribe.domain.community.CommunityPost
 import com.tribe.domain.community.CommunityPostRepository
 import com.tribe.domain.itinerary.Category
@@ -33,11 +31,13 @@ import java.time.LocalDate
 @ExtendWith(MockitoExtension::class)
 class TripServiceTest {
     @Mock private lateinit var currentActor: CurrentActor
+    @Mock private lateinit var tripAuthorizationPolicy: TripAuthorizationPolicy
+    @Mock private lateinit var tripMemberIntegrityService: TripMemberIntegrityService
+    @Mock private lateinit var tripRealtimeEventPublisher: TripRealtimeEventPublisher
     @Mock private lateinit var memberRepository: MemberRepository
     @Mock private lateinit var tripRepository: TripRepository
     @Mock private lateinit var tripMemberRepository: TripMemberRepository
     @Mock private lateinit var tripInvitationRepository: TripInvitationRepository
-    @Mock private lateinit var tripAuthorizationPolicy: TripAuthorizationPolicy
     @Mock private lateinit var communityPostRepository: CommunityPostRepository
 
     private lateinit var tripService: TripService
@@ -46,11 +46,13 @@ class TripServiceTest {
     fun setUp() {
         tripService = TripService(
             currentActor = currentActor,
+            tripAuthorizationPolicy = tripAuthorizationPolicy,
+            tripMemberIntegrityService = tripMemberIntegrityService,
+            tripRealtimeEventPublisher = tripRealtimeEventPublisher,
             memberRepository = memberRepository,
             tripRepository = tripRepository,
             tripMemberRepository = tripMemberRepository,
             tripInvitationRepository = tripInvitationRepository,
-            tripAuthorizationPolicy = tripAuthorizationPolicy,
             communityPostRepository = communityPostRepository,
             appUrl = "http://localhost:3000",
         )
@@ -96,11 +98,11 @@ class TripServiceTest {
         `when`(tripRepository.findTripWithMembersById(5L)).thenReturn(trip)
         `when`(tripMemberRepository.findByTripIdAndMemberId(5L, 1L)).thenReturn(tripMember)
 
-        val ex = assertThrows(BusinessException::class.java) {
+        val ex = assertThrows(com.tribe.application.exception.business.BusinessException::class.java) {
             tripService.joinTrip(TripCommand.Join("token"))
         }
 
-        assertEquals(ErrorCode.BANNED_MEMBER, ex.errorCode)
+        assertEquals(com.tribe.application.exception.ErrorCode.BANNED_MEMBER, ex.errorCode)
     }
 
     @Test
@@ -128,89 +130,23 @@ class TripServiceTest {
     }
 
     @Test
-    fun `addGuest adds guest membership`() {
-        val trip = Trip("Trip", LocalDate.now(), LocalDate.now().plusDays(1), Country.JAPAN)
-        `when`(tripRepository.findTripWithMembersById(5L)).thenReturn(trip)
-        `when`(tripAuthorizationPolicy.isTripAdmin(5L)).thenReturn(true)
+    fun `member integrity operations delegate to integrity service`() {
+        val delegated = TripResult.TripDetail(
+            tripId = 5L,
+            title = "Trip",
+            startDate = LocalDate.of(2026, 4, 12),
+            endDate = LocalDate.of(2026, 4, 13),
+            country = "JP",
+            members = emptyList(),
+        )
+        `when`(tripMemberIntegrityService.deleteGuest(TripCommand.DeleteGuest(5L, 10L))).thenReturn(delegated)
+        `when`(tripMemberIntegrityService.leaveTrip(TripCommand.Leave(5L))).thenReturn(delegated)
+        `when`(tripMemberIntegrityService.kickMember(TripCommand.KickMember(5L, 2L))).thenReturn(delegated)
+        `when`(tripMemberIntegrityService.assignRole(TripCommand.AssignRole(5L, 2L, "admin"))).thenReturn(delegated)
 
-        val result = tripService.addGuest(TripCommand.AddGuest(5L, "guest"))
-
-        assertEquals(1, result.members.size)
-        assertEquals("guest", result.members.first().nickname)
-        assertEquals(TripRole.GUEST.name, result.members.first().role)
-    }
-
-    @Test
-    fun `deleteGuest removes guest membership`() {
-        val trip = Trip("Trip", LocalDate.now(), LocalDate.now().plusDays(1), Country.JAPAN)
-        val guest = TripMember(member = null, trip = trip, guestNickname = "guest", role = TripRole.GUEST)
-        trip.members.add(guest)
-        `when`(tripRepository.findTripWithMembersById(5L)).thenReturn(trip)
-        `when`(tripAuthorizationPolicy.isTripAdmin(5L)).thenReturn(true)
-
-        val result = tripService.deleteGuest(TripCommand.DeleteGuest(5L, guest.id))
-
-        assertEquals(0, result.members.size)
-    }
-
-    @Test
-    fun `leaveTrip marks member as exited`() {
-        val trip = Trip("Trip", LocalDate.now(), LocalDate.now().plusDays(1), Country.JAPAN)
-        val actor = Member(id = 1L, email = "user@example.com", passwordHash = "hashed", nickname = "tribe")
-        trip.members.add(TripMember(member = actor, trip = trip, role = TripRole.MEMBER))
-        `when`(currentActor.requireUserId()).thenReturn(1L)
-        `when`(tripAuthorizationPolicy.isTripMember(5L)).thenReturn(true)
-        `when`(tripRepository.findTripWithMembersById(5L)).thenReturn(trip)
-
-        tripService.leaveTrip(TripCommand.Leave(5L))
-
-        assertEquals(TripRole.EXITED, trip.members.first().role)
-    }
-
-    @Test
-    fun `leaveTrip rejects owner`() {
-        val trip = Trip("Trip", LocalDate.now(), LocalDate.now().plusDays(1), Country.JAPAN)
-        val actor = Member(id = 1L, email = "user@example.com", passwordHash = "hashed", nickname = "tribe")
-        trip.members.add(TripMember(member = actor, trip = trip, role = TripRole.OWNER))
-        `when`(currentActor.requireUserId()).thenReturn(1L)
-        `when`(tripAuthorizationPolicy.isTripMember(5L)).thenReturn(true)
-        `when`(tripRepository.findTripWithMembersById(5L)).thenReturn(trip)
-
-        val ex = assertThrows(BusinessException::class.java) {
-            tripService.leaveTrip(TripCommand.Leave(5L))
-        }
-
-        assertEquals(ErrorCode.NO_AUTHORITY_TRIP, ex.errorCode)
-    }
-
-    @Test
-    fun `kickMember marks target as kicked`() {
-        val trip = Trip("Trip", LocalDate.now(), LocalDate.now().plusDays(1), Country.JAPAN)
-        val admin = Member(id = 1L, email = "admin@example.com", passwordHash = "hashed", nickname = "admin")
-        val member = Member(id = 2L, email = "user@example.com", passwordHash = "hashed", nickname = "member")
-        trip.members.add(TripMember(member = admin, trip = trip, role = TripRole.ADMIN))
-        trip.members.add(TripMember(member = member, trip = trip, role = TripRole.MEMBER))
-        `when`(currentActor.requireUserId()).thenReturn(1L)
-        `when`(tripAuthorizationPolicy.isTripAdmin(5L)).thenReturn(true)
-        `when`(tripRepository.findTripWithMembersById(5L)).thenReturn(trip)
-
-        tripService.kickMember(TripCommand.KickMember(5L, 2L))
-
-        assertEquals(TripRole.KICKED, trip.members.last().role)
-    }
-
-    @Test
-    fun `assignRole updates target role`() {
-        val trip = Trip("Trip", LocalDate.now(), LocalDate.now().plusDays(1), Country.JAPAN)
-        val owner = Member(id = 1L, email = "owner@example.com", passwordHash = "hashed", nickname = "owner")
-        val member = Member(id = 2L, email = "user@example.com", passwordHash = "hashed", nickname = "member")
-        trip.members.add(TripMember(member = owner, trip = trip, role = TripRole.OWNER))
-        trip.members.add(TripMember(member = member, trip = trip, role = TripRole.MEMBER))
-        `when`(tripAuthorizationPolicy.isTripOwner(5L)).thenReturn(true)
-        `when`(tripRepository.findTripWithMembersById(5L)).thenReturn(trip)
-
-        tripService.assignRole(TripCommand.AssignRole(5L, 2L, "admin"))
-
-        assertEquals(TripRole.ADMIN, trip.members.last().role)
+        assertEquals(5L, tripService.deleteGuest(TripCommand.DeleteGuest(5L, 10L)).tripId)
+        assertEquals(5L, tripService.leaveTrip(TripCommand.Leave(5L)).tripId)
+        assertEquals(5L, tripService.kickMember(TripCommand.KickMember(5L, 2L)).tripId)
+        assertEquals(5L, tripService.assignRole(TripCommand.AssignRole(5L, 2L, "admin")).tripId)
     }
 }

@@ -4,6 +4,14 @@ import com.tribe.application.exception.ErrorCode
 import com.tribe.application.exception.business.BusinessException
 import com.tribe.application.redis.TripInvitationRepository
 import com.tribe.application.security.CurrentActor
+import com.tribe.application.trip.event.TripLifecycleAction
+import com.tribe.application.trip.event.TripLifecycleEvent
+import com.tribe.application.trip.event.TripMemberAction
+import com.tribe.application.trip.event.TripMemberEvent
+import com.tribe.application.trip.event.TripRealtimeEvent
+import com.tribe.application.trip.event.TripRealtimeEventPublisher
+import com.tribe.application.trip.event.TripRealtimeEventType
+import com.tribe.application.trip.event.TripSummary
 import com.tribe.domain.community.CommunityPostRepository
 import com.tribe.domain.itinerary.Category
 import com.tribe.domain.itinerary.ItineraryItem
@@ -28,6 +36,8 @@ import java.util.Base64
 class TripService(
     private val currentActor: CurrentActor,
     private val tripAuthorizationPolicy: TripAuthorizationPolicy,
+    private val tripMemberIntegrityService: TripMemberIntegrityService,
+    private val tripRealtimeEventPublisher: TripRealtimeEventPublisher,
     private val memberRepository: MemberRepository,
     private val tripRepository: TripRepository,
     private val tripMemberRepository: TripMemberRepository,
@@ -50,7 +60,16 @@ class TripService(
         ).apply {
             addMember(member, TripRole.OWNER)
         }
-        return TripResult.TripDetail.from(tripRepository.save(trip))
+        val result = TripResult.TripDetail.from(tripRepository.save(trip))
+        tripRealtimeEventPublisher.publish(
+            TripRealtimeEvent(
+                type = TripRealtimeEventType.TRIP_LIFECYCLE,
+                tripId = result.tripId,
+                actorId = currentActor.requireUserId(),
+                lifecycle = TripLifecycleEvent(action = TripLifecycleAction.CREATED, trip = TripSummary.from(result)),
+            ),
+        )
+        return result
     }
 
     @Transactional(readOnly = true)
@@ -62,7 +81,16 @@ class TripService(
         if (membership.role == TripRole.EXITED || membership.role == TripRole.KICKED) {
             throw BusinessException(ErrorCode.NOT_A_TRIP_MEMBER)
         }
-        return TripResult.TripDetail.from(trip)
+        val result = TripResult.TripDetail.from(trip)
+        tripRealtimeEventPublisher.publish(
+            TripRealtimeEvent(
+                type = TripRealtimeEventType.TRIP_LIFECYCLE,
+                tripId = result.tripId,
+                actorId = currentActor.requireUserId(),
+                lifecycle = TripLifecycleEvent(action = TripLifecycleAction.UPDATED, trip = TripSummary.from(result)),
+            ),
+        )
+        return result
     }
 
     @Transactional(readOnly = true)
@@ -84,6 +112,14 @@ class TripService(
             BusinessException(ErrorCode.TRIP_NOT_FOUND)
         }
         tripRepository.delete(trip)
+        tripRealtimeEventPublisher.publish(
+            TripRealtimeEvent(
+                type = TripRealtimeEventType.TRIP_LIFECYCLE,
+                tripId = tripId,
+                actorId = currentActor.requireUserId(),
+                lifecycle = TripLifecycleEvent(action = TripLifecycleAction.DELETED, deletedTripId = tripId),
+            ),
+        )
     }
 
     fun createInvitation(tripId: Long): TripResult.Invitation {
@@ -120,7 +156,28 @@ class TripService(
             else -> Unit
         }
 
-        return TripResult.TripDetail.from(trip)
+        val joinedMembership = trip.members.firstOrNull {
+            it.member?.id == currentMemberId && it.role != TripRole.EXITED && it.role != TripRole.KICKED
+        } ?: throw BusinessException(ErrorCode.NOT_A_TRIP_MEMBER)
+
+        val result = TripResult.TripDetail.from(trip)
+        tripRealtimeEventPublisher.publish(
+            TripRealtimeEvent(
+                type = TripRealtimeEventType.TRIP_MEMBER,
+                tripId = result.tripId,
+                actorId = currentMemberId,
+                member = TripMemberEvent(action = TripMemberAction.MEMBER_JOINED, member = TripResult.MemberSummary.from(joinedMembership)),
+            ),
+        )
+        tripRealtimeEventPublisher.publish(
+            TripRealtimeEvent(
+                type = TripRealtimeEventType.TRIP_LIFECYCLE,
+                tripId = result.tripId,
+                actorId = currentMemberId,
+                lifecycle = TripLifecycleEvent(action = TripLifecycleAction.UPDATED, trip = TripSummary.from(result)),
+            ),
+        )
+        return result
     }
 
     fun importTrip(command: TripCommand.Import): TripResult.TripDetail {
@@ -162,77 +219,53 @@ class TripService(
             importTrip.categories.add(importCategory)
         }
 
-        return TripResult.TripDetail.from(tripRepository.save(importTrip))
+        val result = TripResult.TripDetail.from(tripRepository.save(importTrip))
+        tripRealtimeEventPublisher.publish(
+            TripRealtimeEvent(
+                type = TripRealtimeEventType.TRIP_LIFECYCLE,
+                tripId = result.tripId,
+                actorId = currentActor.requireUserId(),
+                lifecycle = TripLifecycleEvent(action = TripLifecycleAction.IMPORTED, trip = TripSummary.from(result)),
+            ),
+        )
+        return result
     }
 
     fun addGuest(command: TripCommand.AddGuest): TripResult.TripDetail {
         tripAuthorizationPolicy.isTripAdmin(command.tripId)
         val trip = findTripWithMembers(command.tripId)
-        trip.members.add(
-            TripMember(
+        val guest = TripMember(
                 member = null,
                 trip = trip,
                 guestNickname = command.nickname.trim(),
                 role = TripRole.GUEST,
+            )
+        trip.members.add(guest)
+        tripRealtimeEventPublisher.publish(
+            TripRealtimeEvent(
+                type = TripRealtimeEventType.TRIP_MEMBER,
+                tripId = command.tripId,
+                actorId = currentActor.requireUserId(),
+                member = TripMemberEvent(action = TripMemberAction.GUEST_ADDED, member = TripResult.MemberSummary.from(guest)),
             ),
         )
         return TripResult.TripDetail.from(trip)
     }
 
     fun deleteGuest(command: TripCommand.DeleteGuest): TripResult.TripDetail {
-        tripAuthorizationPolicy.isTripAdmin(command.tripId)
-        val trip = findTripWithMembers(command.tripId)
-        val guest = trip.members.firstOrNull { it.id == command.tripMemberId && it.role == TripRole.GUEST }
-            ?: throw BusinessException(ErrorCode.RESOURCE_NOT_FOUND)
-        trip.members.remove(guest)
-        return TripResult.TripDetail.from(trip)
+        return tripMemberIntegrityService.deleteGuest(command)
     }
 
     fun leaveTrip(command: TripCommand.Leave): TripResult.TripDetail {
-        val actorId = currentActor.requireUserId()
-        tripAuthorizationPolicy.isTripMember(command.tripId)
-        val trip = findTripWithMembers(command.tripId)
-        val membership = findActiveMembership(trip, actorId)
-        if (membership.role == TripRole.OWNER) {
-            throw BusinessException(ErrorCode.NO_AUTHORITY_TRIP)
-        }
-        membership.role = TripRole.EXITED
-        return TripResult.TripDetail.from(trip)
+        return tripMemberIntegrityService.leaveTrip(command)
     }
 
     fun kickMember(command: TripCommand.KickMember): TripResult.TripDetail {
-        tripAuthorizationPolicy.isTripAdmin(command.tripId)
-        val actorId = currentActor.requireUserId()
-        if (actorId == command.memberId) {
-            throw BusinessException(ErrorCode.INVALID_INPUT)
-        }
-        val trip = findTripWithMembers(command.tripId)
-        val actorMembership = findActiveMembership(trip, actorId)
-        val targetMembership = findActiveMembership(trip, command.memberId)
-
-        if (targetMembership.role == TripRole.OWNER) {
-            throw BusinessException(ErrorCode.NO_AUTHORITY_TRIP)
-        }
-        if (actorMembership.role == TripRole.ADMIN && targetMembership.role != TripRole.MEMBER) {
-            throw BusinessException(ErrorCode.NO_AUTHORITY_TRIP)
-        }
-
-        targetMembership.role = TripRole.KICKED
-        return TripResult.TripDetail.from(trip)
+        return tripMemberIntegrityService.kickMember(command)
     }
 
     fun assignRole(command: TripCommand.AssignRole): TripResult.TripDetail {
-        tripAuthorizationPolicy.isTripOwner(command.tripId)
-        val trip = findTripWithMembers(command.tripId)
-        val targetMembership = findActiveMembership(trip, command.memberId)
-        val targetRole = parseAssignableRole(command.role)
-
-        if (targetMembership.role == TripRole.OWNER) {
-            throw BusinessException(ErrorCode.NO_AUTHORITY_TRIP)
-        }
-
-        targetMembership.role = targetRole
-        return TripResult.TripDetail.from(trip)
+        return tripMemberIntegrityService.assignRole(command)
     }
 
     private fun findCurrentMember() =
@@ -243,18 +276,6 @@ class TripService(
     private fun findTripWithMembers(tripId: Long): Trip =
         tripRepository.findTripWithMembersById(tripId)
             ?: throw BusinessException(ErrorCode.TRIP_NOT_FOUND)
-
-    private fun findActiveMembership(trip: Trip, memberId: Long): TripMember =
-        trip.members.firstOrNull {
-            it.member?.id == memberId && it.role != TripRole.EXITED && it.role != TripRole.KICKED
-        } ?: throw BusinessException(ErrorCode.NOT_A_TRIP_MEMBER)
-
-    private fun parseAssignableRole(role: String): TripRole =
-        when (role.trim().uppercase()) {
-            TripRole.ADMIN.name -> TripRole.ADMIN
-            TripRole.MEMBER.name -> TripRole.MEMBER
-            else -> throw BusinessException(ErrorCode.INVALID_INPUT)
-        }
 
     private fun generateInvitationToken(): String {
         val randomBytes = ByteArray(16)

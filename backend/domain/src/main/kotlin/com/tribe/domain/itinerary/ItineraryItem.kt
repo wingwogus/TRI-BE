@@ -18,7 +18,7 @@ class ItineraryItem(
     var category: Category,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "place_id")
-    val place: Place?,
+    var place: Place?,
     var title: String?,
     var time: LocalDateTime?,
     @Column(name = "item_order", nullable = false)

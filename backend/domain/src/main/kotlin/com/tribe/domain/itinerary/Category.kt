@@ -18,7 +18,7 @@ class Category(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "trip_id", nullable = false)
     val trip: Trip,
-    @Column(nullable = false)
+    @Column(name = "category_day", nullable = false)
     var day: Int,
     @Column(nullable = false)
     var name: String,

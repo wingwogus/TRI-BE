@@ -1,6 +1,8 @@
 package com.tribe.api.expense
 
 import com.tribe.api.exception.GlobalExceptionHandler
+import com.tribe.application.expense.AssignExpenseParticipantsUseCase
+import com.tribe.application.expense.ClearExpenseAssignmentsUseCase
 import com.tribe.application.expense.CreateExpenseUseCase
 import com.tribe.application.expense.DeleteExpenseUseCase
 import com.tribe.application.expense.ExpenseCommand
@@ -12,6 +14,7 @@ import com.tribe.application.expense.UpdateExpenseUseCase
 import com.tribe.application.security.TokenProvider
 import org.hamcrest.Matchers.equalTo
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
@@ -19,8 +22,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
+import org.springframework.mock.web.MockMultipartFile
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -37,6 +42,8 @@ class ExpenseControllerTest(
     @MockBean private lateinit var listExpensesUseCase: ListExpensesUseCase
     @MockBean private lateinit var getExpenseDetailUseCase: GetExpenseDetailUseCase
     @MockBean private lateinit var updateExpenseUseCase: UpdateExpenseUseCase
+    @MockBean private lateinit var assignExpenseParticipantsUseCase: AssignExpenseParticipantsUseCase
+    @MockBean private lateinit var clearExpenseAssignmentsUseCase: ClearExpenseAssignmentsUseCase
     @MockBean private lateinit var deleteExpenseUseCase: DeleteExpenseUseCase
     @MockBean private lateinit var tokenProvider: TokenProvider
 
@@ -53,66 +60,100 @@ class ExpenseControllerTest(
                     category = "FOOD",
                     splitType = "EQUAL",
                     payerTripMemberId = 11L,
+                    itineraryItemId = 7L,
+                    inputMethod = "HANDWRITE",
                     note = "Team meal",
-                    participants = listOf(
-                        ExpenseCommand.Participant(11L, BigDecimal("60.25")),
-                        ExpenseCommand.Participant(12L, BigDecimal("60.25")),
+                    items = listOf(
+                        ExpenseCommand.Item(itemName = "Pasta", price = BigDecimal("60.25")),
+                        ExpenseCommand.Item(itemName = "Wine", price = BigDecimal("60.25")),
+                    ),
+                    receiptImageBytes = null,
+                    receiptImageContentType = null,
+                ),
+            ),
+        ).thenReturn(sampleExpenseDetail())
+
+        val requestPart = MockMultipartFile(
+            "request",
+            "",
+            MediaType.APPLICATION_JSON_VALUE,
+            """
+            {
+              "title": "Dinner",
+              "amount": 120.50,
+              "currencyCode": "USD",
+              "spentAt": "2026-04-12",
+              "category": "FOOD",
+              "splitType": "EQUAL",
+              "payerTripMemberId": 11,
+              "itineraryItemId": 7,
+              "inputMethod": "HANDWRITE",
+              "note": "Team meal",
+              "items": [
+                {"itemName": "Pasta", "price": 60.25},
+                {"itemName": "Wine", "price": 60.25}
+              ]
+            }
+            """.trimIndent().toByteArray(),
+        )
+        mockMvc.perform(
+            multipart("/api/v1/trips/5/expenses")
+                .file(requestPart)
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.title", equalTo("Dinner")))
+            .andExpect(jsonPath("$.data.items[0].itemName", equalTo("Pasta")))
+    }
+
+    @Test
+    fun `createExpense rejects blank title`() {
+        val requestPart = MockMultipartFile(
+            "request",
+            "",
+            MediaType.APPLICATION_JSON_VALUE,
+            """
+            {
+              "title": " ",
+              "amount": 120.50,
+              "currencyCode": "USD",
+              "spentAt": "2026-04-12",
+              "category": "FOOD",
+              "splitType": "EQUAL",
+              "payerTripMemberId": 11,
+              "inputMethod": "HANDWRITE",
+              "items": [{"itemName": "Pasta", "price": 120.50}]
+            }
+            """.trimIndent().toByteArray(),
+        )
+
+        mockMvc.perform(multipart("/api/v1/trips/5/expenses").file(requestPart))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error.code", equalTo("COMMON_001")))
+    }
+
+    @Test
+    fun `assignParticipants returns updated detail`() {
+        `when`(
+            assignExpenseParticipantsUseCase.assignParticipants(
+                ExpenseCommand.AssignParticipants(
+                    tripId = 5L,
+                    expenseId = 3L,
+                    items = listOf(
+                        ExpenseCommand.ItemAssignment(9L, listOf(11L, 12L)),
                     ),
                 ),
             ),
         ).thenReturn(sampleExpenseDetail())
 
         mockMvc.perform(
-            post("/api/v1/trips/5/expenses")
+            post("/api/v1/trips/5/expenses/3/assignments")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    """
-                    {
-                      "title": "Dinner",
-                      "amount": 120.50,
-                      "currencyCode": "USD",
-                      "spentAt": "2026-04-12",
-                      "category": "FOOD",
-                      "splitType": "EQUAL",
-                      "payerTripMemberId": 11,
-                      "note": "Team meal",
-                      "participants": [
-                        {"tripMemberId": 11, "shareAmount": 60.25},
-                        {"tripMemberId": 12, "shareAmount": 60.25}
-                      ]
-                    }
-                    """.trimIndent(),
-                ),
+                .content("""{"items":[{"itemId":9,"participantIds":[11,12]}]}"""),
         )
-            .andExpect(status().isCreated)
-            .andExpect(jsonPath("$.success").value(true))
-            .andExpect(jsonPath("$.data.title", equalTo("Dinner")))
-            .andExpect(jsonPath("$.data.participants[1].tripMemberId", equalTo(12)))
-    }
-
-    @Test
-    fun `createExpense rejects blank title`() {
-        mockMvc.perform(
-            post("/api/v1/trips/5/expenses")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    """
-                    {
-                      "title": " ",
-                      "amount": 120.50,
-                      "currencyCode": "USD",
-                      "spentAt": "2026-04-12",
-                      "category": "FOOD",
-                      "splitType": "EQUAL",
-                      "payerTripMemberId": 11
-                    }
-                    """.trimIndent(),
-                ),
-        )
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.success").value(false))
-            .andExpect(jsonPath("$.error.code", equalTo("COMMON_001")))
-            .andExpect(jsonPath("$.error.detail.field", equalTo("title")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.items[0].participants[0].tripMemberId", equalTo(11)))
     }
 
     @Test
@@ -122,6 +163,7 @@ class ExpenseControllerTest(
                 ExpenseResult.Summary(
                     expenseId = 1L,
                     tripId = 5L,
+                    itineraryItemId = 7L,
                     title = "Taxi",
                     amount = BigDecimal("32.00"),
                     currencyCode = "JPY",
@@ -130,7 +172,9 @@ class ExpenseControllerTest(
                     splitType = "EQUAL",
                     payerTripMemberId = 11L,
                     payerName = "payer",
-                    participantCount = 2,
+                    itemCount = 1,
+                    inputMethod = "HANDWRITE",
+                    receiptImageUrl = null,
                 ),
             ),
         )
@@ -140,11 +184,13 @@ class ExpenseControllerTest(
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data[0].expenseId", equalTo(1)))
             .andExpect(jsonPath("$.data[0].payerName", equalTo("payer")))
+            .andExpect(jsonPath("$.data[0].itemCount", equalTo(1)))
     }
 
     private fun sampleExpenseDetail() = ExpenseResult.Detail(
         expenseId = 1L,
         tripId = 5L,
+        itineraryItemId = 7L,
         createdByMemberId = 1L,
         title = "Dinner",
         amount = BigDecimal("120.50"),
@@ -152,12 +198,21 @@ class ExpenseControllerTest(
         spentAt = LocalDate.of(2026, 4, 12),
         category = "FOOD",
         splitType = "EQUAL",
+        inputMethod = "HANDWRITE",
         payerTripMemberId = 11L,
         payerName = "payer",
         note = "Team meal",
-        participants = listOf(
-            ExpenseResult.ParticipantSummary(11L, 1L, "payer", "MEMBER", BigDecimal("60.25")),
-            ExpenseResult.ParticipantSummary(12L, 2L, "member", "MEMBER", BigDecimal("60.25")),
+        receiptImageUrl = "https://cdn/receipt.jpg",
+        items = listOf(
+            ExpenseResult.ItemDetail(
+                itemId = 9L,
+                itemName = "Pasta",
+                price = BigDecimal("60.25"),
+                participants = listOf(
+                    ExpenseResult.ItemParticipantSummary(11L, 1L, "payer", false, BigDecimal("30.12")),
+                    ExpenseResult.ItemParticipantSummary(12L, 2L, "member", false, BigDecimal("30.13")),
+                ),
+            ),
         ),
     )
 }

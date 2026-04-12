@@ -2,7 +2,7 @@ package com.tribe.application.trip
 
 import com.tribe.application.exception.ErrorCode
 import com.tribe.application.exception.business.BusinessException
-import com.tribe.application.itinerary.PlaceSearchService
+import com.tribe.application.itinerary.place.PlaceSearchService
 import com.tribe.domain.itinerary.Place
 import com.tribe.domain.itinerary.PlaceRepository
 import com.tribe.domain.itinerary.RecommendedPlace

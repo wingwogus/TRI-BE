@@ -80,6 +80,10 @@ chat:
   redis:
     enabled: false
 
+trip:
+  realtime:
+    enabled: false
+
 tribe:
   auth:
     enabled: true

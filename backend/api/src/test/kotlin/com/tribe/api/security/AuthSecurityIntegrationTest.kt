@@ -45,6 +45,12 @@ class AuthSecurityIntegrationTest(
     }
 
     @Test
+    fun `member profile endpoint rejects missing token`() {
+        mockMvc.perform(get("/api/v1/members/me"))
+            .andExpect(status().isUnauthorized)
+    }
+
+    @Test
     fun `protected endpoint accepts valid jwt`() {
         val accessToken = tokenProvider.createAccessToken(42L, "ROLE_USER")
 
@@ -65,6 +71,17 @@ class AuthSecurityIntegrationTest(
                 .header(HttpHeaders.AUTHORIZATION, "Bearer $refreshToken")
         )
             .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `member profile endpoint accepts valid jwt and reaches application layer`() {
+        val accessToken = tokenProvider.createAccessToken(42L, "ROLE_USER")
+
+        mockMvc.perform(
+            get("/api/v1/members/me")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $accessToken")
+        )
+            .andExpect(status().isNotFound)
     }
 
     @Test

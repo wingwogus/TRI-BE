@@ -27,11 +27,12 @@ class SettlementService(
 ) {
     private val krw = "KRW"
     private val epsilon = BigDecimal("1.00")
+    private val foreignScale = 2
 
     @PreAuthorize("@tripAuthorizationPolicy.isTripMember(#tripId)")
     fun getDailySettlement(tripId: Long, date: LocalDate): SettlementResult.Daily {
         val trip = tripRepository.findById(tripId).orElseThrow { BusinessException(ErrorCode.TRIP_NOT_FOUND) }
-        val dailyExpenses = expenseRepository.findAllByTripIdOrderBySpentAtDescIdDesc(tripId)
+        val dailyExpenses = expenseRepository.findAllWithDetailsByTripId(tripId)
             .filter { it.spentAt == date }
 
         val totalKrw = dailyExpenses.sumOf { convertToKrw(it.amount, it.currencyCode, it.spentAt) }
@@ -44,7 +45,11 @@ class SettlementService(
                 assignedAmount = it.assignedAmountKrw,
             )
         }
-        val debtRelations = calculateDebtRelations(memberData)
+        val debtRelations = calculateDebtRelationsByCurrency(
+            members = trip.members,
+            expenses = dailyExpenses,
+            rateLookup = { currencyCode -> findClosestRate(currencyCode, date)?.exchangeRate },
+        )
 
         val totalAssigned = memberSummaries.sumOf { it.assignedAmount }
         if (totalKrw.subtract(totalAssigned).abs() > epsilon) {
@@ -72,8 +77,13 @@ class SettlementService(
     @PreAuthorize("@tripAuthorizationPolicy.isTripMember(#tripId)")
     fun getTotalSettlement(tripId: Long): SettlementResult.Total {
         val trip = tripRepository.findById(tripId).orElseThrow { BusinessException(ErrorCode.TRIP_NOT_FOUND) }
-        val expenses = expenseRepository.findAllByTripIdOrderBySpentAtDescIdDesc(tripId)
+        val expenses = expenseRepository.findAllWithDetailsByTripId(tripId)
         val memberData = calculateMemberSettlementData(trip.members, expenses)
+        val debtRelations = calculateDebtRelationsByCurrency(
+            members = trip.members,
+            expenses = expenses,
+            rateLookup = { currencyCode -> currencyRepository.findTopByCurUnitOrderByDateDesc(currencyCode)?.exchangeRate },
+        )
         return SettlementResult.Total(
             memberBalances = memberData.map {
                 SettlementResult.MemberBalance(
@@ -83,7 +93,7 @@ class SettlementService(
                     foreignCurrenciesUsed = it.foreignCurrencies,
                 )
             },
-            debtRelations = calculateDebtRelations(memberData),
+            debtRelations = debtRelations,
             isExchangeRateApplied = true,
         )
     }
@@ -98,15 +108,19 @@ class SettlementService(
                 .sumOf { convertToKrw(it.amount, it.currencyCode, it.spentAt) }
 
             val assigned = expenses
-                .flatMap { expense -> expense.participants.map { participant -> expense to participant } }
-                .filter { (_, participant) -> participant.tripMember.id == member.id }
-                .sumOf { (expense, participant) ->
-                    val share = participant.shareAmount ?: BigDecimal.ZERO
-                    convertToKrw(share, expense.currencyCode, expense.spentAt)
+                .flatMap { expense -> expense.expenseItems.flatMap { item -> item.assignments.map { assignment -> expense to assignment } } }
+                .filter { (_, assignment) -> assignment.tripMember.id == member.id }
+                .sumOf { (expense, assignment) ->
+                    convertToKrw(assignment.amount, expense.currencyCode, expense.spentAt)
                 }
 
             val foreignCurrencies = expenses
-                .filter { it.currencyCode != krw && (it.payer.id == member.id || it.participants.any { p -> p.tripMember.id == member.id }) }
+                .filter {
+                    it.currencyCode != krw && (
+                        it.payer.id == member.id ||
+                            it.expenseItems.any { item -> item.assignments.any { assignment -> assignment.tripMember.id == member.id } }
+                        )
+                }
                 .map { it.currencyCode }
                 .distinct()
 
@@ -141,38 +155,91 @@ class SettlementService(
         }
     }
 
-    private fun calculateDebtRelations(data: List<MemberSettlementData>): List<SettlementResult.DebtRelation> {
-        val debtors = data.map { it.member to it.paidAmountKrw.subtract(it.assignedAmountKrw) }
-            .filter { it.second < BigDecimal.ZERO }
-            .map { it.first to it.second.abs() }
-            .toMutableList()
-        val creditors = data.map { it.member to it.paidAmountKrw.subtract(it.assignedAmountKrw) }
-            .filter { it.second > BigDecimal.ZERO }
-            .toMutableList()
+    private fun calculateDebtRelationsByCurrency(
+        members: List<TripMember>,
+        expenses: List<Expense>,
+        rateLookup: (currencyCode: String) -> BigDecimal?,
+    ): List<SettlementResult.DebtRelation> {
+        val allRelations = mutableListOf<SettlementResult.DebtRelation>()
+        val allCurrencies = expenses.map { it.currencyCode.uppercase() }.distinct().plus(krw).distinct()
 
-        val result = mutableListOf<SettlementResult.DebtRelation>()
-        var d = 0
-        var c = 0
-        while (d < debtors.size && c < creditors.size) {
-            val (debtor, debtAmount) = debtors[d]
-            val (creditor, creditAmount) = creditors[c]
-            val transfer = debtAmount.min(creditAmount)
-            result.add(
-                SettlementResult.DebtRelation(
-                    fromNickname = debtor.name,
-                    fromTripMemberId = debtor.id,
-                    toNickname = creditor.name,
-                    toTripMemberId = creditor.id,
-                    amount = transfer,
-                )
-            )
+        for (currencyCode in allCurrencies) {
+            val isForeign = currencyCode != krw
+            val exchangeRate = if (isForeign) rateLookup(currencyCode) else BigDecimal.ONE
+            if (exchangeRate == null) continue
 
-            debtors[d] = debtor to debtAmount.subtract(transfer)
-            creditors[c] = creditor to creditAmount.subtract(transfer)
-            if (debtors[d].second.compareTo(BigDecimal.ZERO) == 0) d++
-            if (creditors[c].second.compareTo(BigDecimal.ZERO) == 0) c++
+            val balancesInCurrency = members.map { member ->
+                val paid = expenses
+                    .filter { it.payer.id == member.id && it.currencyCode.uppercase() == currencyCode }
+                    .sumOf { it.amount }
+
+                val assigned = expenses
+                    .flatMap { it.expenseItems }
+                    .flatMap { it.assignments }
+                    .filter { it.tripMember.id == member.id && it.expenseItem.expense.currencyCode.uppercase() == currencyCode }
+                    .sumOf { it.amount }
+
+                member to paid.subtract(assigned)
+            }
+
+            val totalAbsBalance = balancesInCurrency.sumOf { it.second.abs() }
+            if (totalAbsBalance < BigDecimal("0.01")) continue
+
+            allRelations.addAll(calculateMinimalTransfers(balancesInCurrency, currencyCode, exchangeRate))
         }
-        return result
+
+        return allRelations
+    }
+
+    private fun calculateMinimalTransfers(
+        balances: List<Pair<TripMember, BigDecimal>>,
+        currencyCode: String,
+        exchangeRate: BigDecimal,
+    ): List<SettlementResult.DebtRelation> {
+        val cleanBalances = balances
+            .filter { it.second.abs() >= BigDecimal("0.01") }
+            .sortedBy { it.second }
+
+        val debtors = cleanBalances.filter { it.second.signum() < 0 }.toMutableList()
+        val creditors = cleanBalances.filter { it.second.signum() > 0 }.toMutableList()
+        val relations = mutableListOf<SettlementResult.DebtRelation>()
+        val isForeign = currencyCode != krw
+
+        while (debtors.isNotEmpty() && creditors.isNotEmpty()) {
+            val (debtor, debtorBalanceRaw) = debtors.first()
+            val (creditor, creditorBalanceRaw) = creditors.first()
+            val transferOriginal = debtorBalanceRaw.abs().min(creditorBalanceRaw)
+            val transferKrw = transferOriginal.multiply(exchangeRate).setScale(0, RoundingMode.HALF_UP)
+
+            if (transferKrw >= epsilon) {
+                relations.add(
+                    SettlementResult.DebtRelation(
+                        fromNickname = debtor.name,
+                        fromTripMemberId = debtor.id,
+                        toNickname = creditor.name,
+                        toTripMemberId = creditor.id,
+                        amount = transferKrw,
+                        equivalentOriginalAmount = if (isForeign) transferOriginal.setScale(foreignScale, RoundingMode.HALF_UP) else null,
+                        originalCurrencyCode = if (isForeign) currencyCode else null,
+                    ),
+                )
+            }
+
+            val nextDebtorBalance = debtorBalanceRaw.add(transferOriginal)
+            val nextCreditorBalance = creditorBalanceRaw.subtract(transferOriginal)
+            if (nextDebtorBalance.abs() < BigDecimal("0.01")) {
+                debtors.removeAt(0)
+            } else {
+                debtors[0] = debtor to nextDebtorBalance
+            }
+            if (nextCreditorBalance.abs() < BigDecimal("0.01")) {
+                creditors.removeAt(0)
+            } else {
+                creditors[0] = creditor to nextCreditorBalance
+            }
+        }
+
+        return relations
     }
 
     private data class MemberSettlementData(

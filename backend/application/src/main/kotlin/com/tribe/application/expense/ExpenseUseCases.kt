@@ -16,6 +16,14 @@ interface UpdateExpenseUseCase {
     fun updateExpense(command: ExpenseCommand.Update): ExpenseResult.Detail
 }
 
+interface AssignExpenseParticipantsUseCase {
+    fun assignParticipants(command: ExpenseCommand.AssignParticipants): ExpenseResult.Detail
+}
+
+interface ClearExpenseAssignmentsUseCase {
+    fun clearAssignments(command: ExpenseCommand.ClearAssignments): ExpenseResult.Detail
+}
+
 interface DeleteExpenseUseCase {
     fun deleteExpense(command: ExpenseCommand.Delete)
 }
