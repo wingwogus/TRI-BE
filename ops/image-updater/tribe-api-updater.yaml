@@ -8,12 +8,12 @@ spec:
     method: git:secret:argocd/git-creds
     gitConfig:
       branch: main
-      writeBackTarget: "helmvalues:./values-prod.yaml"
+      writeBackTarget: "helmvalues:./values.yaml"
   applicationRefs:
     - namePattern: "tribe-api"
       images:
         - alias: api
-          imageName: vantagac/tribe-api:latest
+          imageName: docker.io/vantagac/tribe-api:latest
           commonUpdateSettings:
             updateStrategy: newest-build
             allowTags: "regexp:^[0-9a-f]{40}$"

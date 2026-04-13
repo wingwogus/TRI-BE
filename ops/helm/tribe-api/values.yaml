@@ -1,11 +1,12 @@
 replicaCount: 2
 
 image:
-  repository: ghcr.io/replace-me/tribe-api
+  repository: docker.io/vantagac/tribe-api
   pullPolicy: IfNotPresent
-  tag: "latest"
+  tag: "1d3c5cdd89bb7bc5edb879e1abdc8553d759a502"
 
-imagePullSecrets: []
+imagePullSecrets:
+  - name: regcred
 
 nameOverride: ""
 fullnameOverride: ""
@@ -41,9 +42,13 @@ envFrom:
 ingress:
   enabled: true
   className: nginx
-  annotations: {}
+  annotations:
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/session-cookie-name: tribe-api-route
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
   hosts:
-    - host: api.example.com
+    - host: api.tribe.jaehyuns.com
       paths:
         - path: /
           pathType: Prefix
@@ -76,7 +81,13 @@ startupProbe:
   failureThreshold: 30
   periodSeconds: 5
 
-resources: {}
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
 
 volumes: []
 volumeMounts: []

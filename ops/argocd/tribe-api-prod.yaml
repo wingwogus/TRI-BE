@@ -11,7 +11,7 @@ spec:
     path: ops/helm/tribe-api
     helm:
       valueFiles:
-        - values-prod.yaml
+        - values.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: tribe

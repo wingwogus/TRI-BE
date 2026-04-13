@@ -22,7 +22,7 @@ Argo CD source path:
 - path: `ops/helm/tribe-api`
 
 Image Updater write-back path:
-- `ops/helm/tribe-api/values-prod.yaml`
+- `ops/helm/tribe-api/values.yaml`
 
 Image Updater notes:
 - Only the backend image is updater-managed because the frontend deploys on Vercel.
