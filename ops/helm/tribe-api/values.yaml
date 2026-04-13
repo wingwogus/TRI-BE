@@ -64,22 +64,25 @@ livenessProbe:
   httpGet:
     path: /actuator/health/liveness
     port: metrics
-  initialDelaySeconds: 30
+  initialDelaySeconds: 90
   periodSeconds: 10
+  timeoutSeconds: 5
 
 readinessProbe:
   httpGet:
     path: /actuator/health/readiness
     port: metrics
-  initialDelaySeconds: 10
+  initialDelaySeconds: 45
   periodSeconds: 5
+  timeoutSeconds: 5
 
 startupProbe:
   httpGet:
     path: /actuator/health
     port: metrics
-  failureThreshold: 30
+  failureThreshold: 60
   periodSeconds: 5
+  timeoutSeconds: 5
 
 resources:
   requests:
