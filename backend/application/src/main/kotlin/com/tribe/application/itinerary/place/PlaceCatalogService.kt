@@ -57,7 +57,8 @@ class PlaceCatalogService(
             result.copy(
                 placeId = place?.id,
                 placeTypeSummary = result.placeTypeSummary ?: placeViewAssembler.toPlaceTypeSummary(place),
-                photoHint = result.photoHint ?: placeViewAssembler.toPhotoHint(place),
+                normalizedCategoryKey = result.normalizedCategoryKey ?: placeViewAssembler.toNormalizedCategoryKey(place),
+                photoHint = null,
                 placeDetailSummary = result.placeDetailSummary ?: placeViewAssembler.toDetailSummary(place),
             )
         }

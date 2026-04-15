@@ -1,5 +1,7 @@
 package com.tribe.application.itinerary.item
 
+import com.tribe.application.itinerary.place.NormalizedPlaceCategoryKey
+import com.tribe.application.itinerary.place.PlaceCategoryNormalizer
 import com.tribe.domain.itinerary.item.ItineraryItem
 import java.time.LocalDateTime
 
@@ -41,6 +43,7 @@ object ItemResult {
         val memo: String?,
         val location: LocationInfo?,
         val placeTypeSummary: PlaceTypeSummary?,
+        val normalizedCategoryKey: NormalizedPlaceCategoryKey?,
         val photoHint: PhotoHint?,
         val placeDetailSummary: PlaceDetailSummary?,
         val openingStatusWarning: String?,
@@ -71,6 +74,9 @@ object ItemResult {
                     )
                 },
                 placeTypeSummary = placeTypeSummary,
+                normalizedCategoryKey = placeTypeSummary?.let {
+                    PlaceCategoryNormalizer.normalize(it.primaryType, it.types)
+                },
                 photoHint = photoHint,
                 placeDetailSummary = placeDetailSummary,
                 openingStatusWarning = openingStatusWarning,

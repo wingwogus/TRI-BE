@@ -11,13 +11,13 @@ import com.tribe.application.itinerary.place.PlacePhotoMedia
 import com.tribe.application.itinerary.place.PlaceSearchContext
 import com.tribe.application.itinerary.place.PlaceSearchGateway
 import com.tribe.application.itinerary.place.PlaceSearchResult
+import com.tribe.application.itinerary.place.PlaceCategoryNormalizer
 import com.tribe.application.itinerary.place.PlaceTypeSummary
 import com.tribe.application.itinerary.place.RegularOpeningPeriodInput
 import com.tribe.application.itinerary.place.RouteDetails
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.http.HttpHeaders
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientResponseException
@@ -47,7 +47,7 @@ class GooglePlaceSearchGateway(
             .header("X-Goog-Api-Key", apiKey)
             .header(
                 "X-Goog-FieldMask",
-                "places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types,places.photos.name",
+                "places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types",
             )
             .bodyValue(body)
             .retrieve()
@@ -78,9 +78,7 @@ class GooglePlaceSearchGateway(
                     types = it.types ?: emptyList(),
                     localizedPrimaryLabel = it.primaryType?.replace('_', ' '),
                 ),
-                photoHint = it.photos?.firstOrNull()?.name?.let { name ->
-                    PlacePhotoHint(name = name, photoUri = "/api/v1/places/photos?name=$name")
-                },
+                normalizedCategoryKey = PlaceCategoryNormalizer.normalize(it.primaryType, it.types ?: emptyList()),
             )
         } ?: emptyList()
     }
@@ -91,7 +89,7 @@ class GooglePlaceSearchGateway(
             .header("X-Goog-Api-Key", apiKey)
             .header(
                 "X-Goog-FieldMask",
-                "id,displayName,formattedAddress,location,primaryType,types,businessStatus,utcOffsetMinutes,nationalPhoneNumber,internationalPhoneNumber,websiteUri,googleMapsUri,rating,userRatingCount,priceLevel,regularOpeningHours,currentOpeningHours,photos.name,editorialSummary",
+                "id,displayName,formattedAddress,location,primaryType,types,businessStatus,utcOffsetMinutes,nationalPhoneNumber,internationalPhoneNumber,websiteUri,googleMapsUri,rating,userRatingCount,priceLevel,regularOpeningHours,currentOpeningHours,editorialSummary",
             )
             .retrieve()
             .bodyToMono(PlaceDetailsResponse::class.java)
@@ -113,6 +111,7 @@ class GooglePlaceSearchGateway(
                 types = response.types ?: emptyList(),
                 localizedPrimaryLabel = response.primaryType?.replace('_', ' '),
             ),
+            normalizedCategoryKey = PlaceCategoryNormalizer.normalize(response.primaryType, response.types ?: emptyList()),
             businessStatus = response.businessStatus,
             utcOffsetMinutes = response.utcOffsetMinutes,
             formattedPhoneNumber = response.nationalPhoneNumber,
@@ -124,7 +123,7 @@ class GooglePlaceSearchGateway(
             priceLevel = parsePriceLevel(response.priceLevel),
             regularOpeningHoursJson = regularOpeningHoursJson,
             currentOpeningHoursJson = currentOpeningHoursJson,
-            primaryPhotoName = response.photos?.firstOrNull()?.name,
+            primaryPhotoName = null,
             editorialSummary = response.editorialSummary?.text,
             regularOpeningPeriods = parseRegularOpeningPeriods(response.regularOpeningHours),
         )
@@ -134,11 +133,12 @@ class GooglePlaceSearchGateway(
         return webClient.get()
             .uri("https://places.googleapis.com/v1/{photoName}/media?maxWidthPx={maxWidthPx}&skipHttpRedirect=true", photoName, maxWidthPx)
             .header("X-Goog-Api-Key", apiKey)
-            .exchangeToMono { response ->
-                response.bodyToMono(ByteArray::class.java).map { bytes ->
+            .retrieve()
+            .bodyToMono(PhotoMediaRedirectResponse::class.java)
+            .map { response ->
+                response.photoUri?.let { uri ->
                     PlacePhotoMedia(
-                        bytes = bytes,
-                        contentType = response.headers().asHttpHeaders().getFirst(HttpHeaders.CONTENT_TYPE),
+                        redirectUri = uri,
                     )
                 }
             }
@@ -276,7 +276,6 @@ class GooglePlaceSearchGateway(
             val displayName: DisplayName?,
             val primaryType: String?,
             val types: List<String>?,
-            val photos: List<Photo>?,
         )
 
         @JsonIgnoreProperties(ignoreUnknown = true)
@@ -291,10 +290,6 @@ class GooglePlaceSearchGateway(
             val languageCode: String?,
         )
 
-        @JsonIgnoreProperties(ignoreUnknown = true)
-        data class Photo(
-            val name: String?,
-        )
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -316,8 +311,12 @@ class GooglePlaceSearchGateway(
         val priceLevel: String?,
         val regularOpeningHours: JsonNode?,
         val currentOpeningHours: JsonNode?,
-        val photos: List<PlacesResponse.Photo>?,
         val editorialSummary: PlacesResponse.DisplayName?
+    )
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    data class PhotoMediaRedirectResponse(
+        val photoUri: String?,
     )
 
     @JsonIgnoreProperties(ignoreUnknown = true)

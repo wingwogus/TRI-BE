@@ -154,6 +154,7 @@ class ItemControllerTest(
         memo = "Booked",
         location = null,
         placeTypeSummary = null,
+        normalizedCategoryKey = null,
         photoHint = null,
         placeDetailSummary = null,
         openingStatusWarning = null,

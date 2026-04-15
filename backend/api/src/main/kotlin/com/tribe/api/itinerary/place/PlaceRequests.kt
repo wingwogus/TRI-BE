@@ -29,6 +29,7 @@ object PlaceRequests {
         val latitude: Double,
         val longitude: Double,
         val placeTypeSummary: PlaceTypeSummaryResponse? = null,
+        val normalizedCategoryKey: String? = null,
         val photoHint: PhotoHintResponse? = null,
         val placeDetailSummary: PlaceDetailSummaryResponse? = null,
     )
@@ -41,6 +42,7 @@ object PlaceRequests {
         val latitude: Double,
         val longitude: Double,
         val placeTypeSummary: PlaceTypeSummaryResponse?,
+        val normalizedCategoryKey: String?,
         val photoHint: PhotoHintResponse?,
         val placeDetailSummary: PlaceDetailSummaryResponse?,
         val formattedPhoneNumber: String?,

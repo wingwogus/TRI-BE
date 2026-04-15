@@ -1,11 +1,31 @@
 package com.tribe.application.trip.review
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.tribe.application.itinerary.place.PlaceCategoryNormalizer
+import com.tribe.application.itinerary.place.NormalizedPlaceCategoryKey
 import com.tribe.domain.trip.review.TripReview
 import java.time.LocalDateTime
 
 object TripReviewResult {
     private val objectMapper = jacksonObjectMapper()
+
+    private fun decodeTypes(json: String?): List<String> =
+        json?.let {
+            runCatching { objectMapper.readValue(it, Array<String>::class.java).toList() }.getOrDefault(emptyList())
+        } ?: emptyList()
+
+    private fun toPlaceTypeSummary(primaryType: String?, googleTypesJson: String?): PlaceTypeSummary? {
+        val types = decodeTypes(googleTypesJson)
+        if (primaryType == null && types.isEmpty()) {
+            return null
+        }
+
+        return PlaceTypeSummary(
+            primaryType = primaryType,
+            types = types,
+            localizedPrimaryLabel = primaryType?.replace('_', ' '),
+        )
+    }
 
     data class PlaceTypeSummary(
         val primaryType: String?,
@@ -47,18 +67,12 @@ object TripReviewResult {
                             address = it.place.address,
                             latitude = it.place.latitude.toDouble(),
                             longitude = it.place.longitude.toDouble(),
-                            placeTypeSummary = it.place.googlePrimaryType?.let { _ ->
-                                PlaceTypeSummary(
-                                    primaryType = it.place.googlePrimaryType,
-                                    types = it.place.googleTypesJson?.let { json ->
-                                        runCatching { objectMapper.readValue(json, Array<String>::class.java).toList() }.getOrDefault(emptyList())
-                                    } ?: emptyList(),
-                                    localizedPrimaryLabel = it.place.googlePrimaryType?.replace('_', ' '),
-                                )
-                            },
-                            photoHint = it.place.detailSnapshot?.primaryPhotoName?.let { name ->
-                                PhotoHint(name = name, photoUri = "/api/v1/places/photos?name=$name")
-                            },
+                            placeTypeSummary = toPlaceTypeSummary(it.place.googlePrimaryType, it.place.googleTypesJson),
+                            normalizedCategoryKey = PlaceCategoryNormalizer.normalize(
+                                it.place.googlePrimaryType,
+                                decodeTypes(it.place.googleTypesJson),
+                            ),
+                            photoHint = null,
                             placeDetailSummary = it.place.detailSnapshot?.let { snapshot ->
                                 PlaceDetailSummary(
                                     businessStatus = it.place.businessStatus,
@@ -106,6 +120,7 @@ object TripReviewResult {
         val latitude: Double,
         val longitude: Double,
         val placeTypeSummary: PlaceTypeSummary?,
+        val normalizedCategoryKey: NormalizedPlaceCategoryKey?,
         val photoHint: PhotoHint?,
         val placeDetailSummary: PlaceDetailSummary?,
     )

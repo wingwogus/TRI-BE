@@ -19,8 +19,9 @@ data class PlacePhotoHint(
 )
 
 data class PlacePhotoMedia(
-    val bytes: ByteArray,
-    val contentType: String?,
+    val bytes: ByteArray? = null,
+    val contentType: String? = null,
+    val redirectUri: String? = null,
 )
 
 data class PlaceSearchContext(
@@ -39,6 +40,7 @@ data class PlaceSearchResult(
     val latitude: Double,
     val longitude: Double,
     val placeTypeSummary: PlaceTypeSummary? = null,
+    val normalizedCategoryKey: NormalizedPlaceCategoryKey? = null,
     val photoHint: PlacePhotoHint? = null,
     val placeDetailSummary: PlaceDetailSummary? = null,
 )
@@ -50,6 +52,7 @@ data class PlaceDetailsResult(
     val latitude: Double,
     val longitude: Double,
     val placeTypeSummary: PlaceTypeSummary? = null,
+    val normalizedCategoryKey: NormalizedPlaceCategoryKey? = null,
     val businessStatus: String? = null,
     val utcOffsetMinutes: Int? = null,
     val formattedPhoneNumber: String? = null,

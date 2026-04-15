@@ -20,6 +20,7 @@ data class PlaceDetailView(
     val latitude: Double,
     val longitude: Double,
     val placeTypeSummary: PlaceTypeSummary?,
+    val normalizedCategoryKey: NormalizedPlaceCategoryKey?,
     val photoHint: PlacePhotoHint?,
     val placeDetailSummary: PlaceDetailSummary?,
     val formattedPhoneNumber: String?,
@@ -34,6 +35,11 @@ data class PlaceDetailView(
 class PlaceViewAssembler(
     private val objectMapper: ObjectMapper,
 ) {
+    fun toNormalizedCategoryKey(place: Place?): NormalizedPlaceCategoryKey? =
+        toPlaceTypeSummary(place)?.let { summary ->
+            PlaceCategoryNormalizer.normalize(summary.primaryType, summary.types)
+        }
+
     fun toPlaceTypeSummary(place: Place?): PlaceTypeSummary? {
         if (place == null) return null
         val types = place.googleTypesJson?.let { payload ->
@@ -53,13 +59,7 @@ class PlaceViewAssembler(
         }
     }
 
-    fun toPhotoHint(place: Place?): PlacePhotoHint? =
-        place?.detailSnapshot?.primaryPhotoName?.let {
-            PlacePhotoHint(
-                name = it,
-                photoUri = "/api/v1/places/photos?name=$it",
-            )
-        }
+    fun toPhotoHint(place: Place?): PlacePhotoHint? = null
 
     fun toDetailSummary(place: Place?): PlaceDetailSummary? {
         val snapshot = place?.detailSnapshot ?: return null
@@ -79,6 +79,7 @@ class PlaceViewAssembler(
         latitude = place.latitude.toDouble(),
         longitude = place.longitude.toDouble(),
         placeTypeSummary = toPlaceTypeSummary(place),
+        normalizedCategoryKey = toNormalizedCategoryKey(place),
         photoHint = toPhotoHint(place),
         placeDetailSummary = toDetailSummary(place),
         formattedPhoneNumber = place.detailSnapshot?.formattedPhoneNumber,

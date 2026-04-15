@@ -1,11 +1,31 @@
 package com.tribe.application.itinerary.wishlist
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.tribe.application.itinerary.place.PlaceCategoryNormalizer
+import com.tribe.application.itinerary.place.NormalizedPlaceCategoryKey
 import com.tribe.domain.itinerary.wishlist.WishlistItem
 import java.math.BigDecimal
 
 object WishlistResult {
     private val objectMapper = jacksonObjectMapper()
+
+    private fun decodeTypes(json: String?): List<String> =
+        json?.let {
+            runCatching { objectMapper.readValue(it, Array<String>::class.java).toList() }.getOrDefault(emptyList())
+        } ?: emptyList()
+
+    private fun toPlaceTypeSummary(primaryType: String?, googleTypesJson: String?): PlaceTypeSummary? {
+        val types = decodeTypes(googleTypesJson)
+        if (primaryType == null && types.isEmpty()) {
+            return null
+        }
+
+        return PlaceTypeSummary(
+            primaryType = primaryType,
+            types = types,
+            localizedPrimaryLabel = primaryType?.replace('_', ' '),
+        )
+    }
 
     data class PlaceTypeSummary(
         val primaryType: String?,
@@ -39,6 +59,7 @@ object WishlistResult {
         val latitude: BigDecimal,
         val longitude: BigDecimal,
         val placeTypeSummary: PlaceTypeSummary?,
+        val normalizedCategoryKey: NormalizedPlaceCategoryKey?,
         val photoHint: PhotoHint?,
         val placeDetailSummary: PlaceDetailSummary?,
         val adder: Adder,
@@ -52,18 +73,12 @@ object WishlistResult {
                     address = entity.place.address,
                     latitude = entity.place.latitude,
                     longitude = entity.place.longitude,
-                    placeTypeSummary = entity.place.googlePrimaryType?.let {
-                        PlaceTypeSummary(
-                            primaryType = entity.place.googlePrimaryType,
-                            types = entity.place.googleTypesJson?.let { json ->
-                                runCatching { objectMapper.readValue(json, Array<String>::class.java).toList() }.getOrDefault(emptyList())
-                            } ?: emptyList(),
-                            localizedPrimaryLabel = entity.place.googlePrimaryType?.replace('_', ' '),
-                        )
-                    },
-                    photoHint = entity.place.detailSnapshot?.primaryPhotoName?.let {
-                        PhotoHint(name = it, photoUri = "/api/v1/places/photos?name=$it")
-                    },
+                    placeTypeSummary = toPlaceTypeSummary(entity.place.googlePrimaryType, entity.place.googleTypesJson),
+                    normalizedCategoryKey = PlaceCategoryNormalizer.normalize(
+                        entity.place.googlePrimaryType,
+                        decodeTypes(entity.place.googleTypesJson),
+                    ),
+                    photoHint = null,
                     placeDetailSummary = entity.place.detailSnapshot?.let {
                         PlaceDetailSummary(
                             businessStatus = entity.place.businessStatus,

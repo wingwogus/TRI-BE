@@ -275,8 +275,8 @@ export const TripReviewModal = ({ open, onOpenChange, tripId, tripStartDate, tri
                           <span className="truncate">{place.placeName}</span>
                         </h4>
                         <div className="flex flex-wrap gap-2 mb-2">
-                          {getPlaceTypeLabel(place.placeTypeSummary) && (
-                            <Badge variant="secondary">{getPlaceTypeLabel(place.placeTypeSummary)}</Badge>
+                          {getPlaceTypeLabel(place.placeTypeSummary, place.normalizedCategoryKey) && (
+                            <Badge variant="secondary">{getPlaceTypeLabel(place.placeTypeSummary, place.normalizedCategoryKey)}</Badge>
                           )}
                           {typeof place.placeDetailSummary?.rating === "number" && (
                             <Badge variant="outline">평점 {place.placeDetailSummary.rating.toFixed(1)}</Badge>

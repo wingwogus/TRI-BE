@@ -1,5 +1,5 @@
 import {authenticatedAxios} from './auth';
-import type { PlaceDetailSummary, PlacePhotoHint, PlaceTypeSummary } from "@/api/placeMetadata";
+import type { NormalizedPlaceCategoryKey, PlaceDetailSummary, PlacePhotoHint, PlaceTypeSummary } from "@/api/placeMetadata";
 
 // Backend response types matching PlaceDto
 export interface PlaceSearchResult {
@@ -10,6 +10,7 @@ export interface PlaceSearchResult {
   latitude: number;
   longitude: number;
   placeTypeSummary?: PlaceTypeSummary | null;
+  normalizedCategoryKey?: NormalizedPlaceCategoryKey | null;
   photoHint?: PlacePhotoHint | null;
   placeDetailSummary?: PlaceDetailSummary | null;
 }

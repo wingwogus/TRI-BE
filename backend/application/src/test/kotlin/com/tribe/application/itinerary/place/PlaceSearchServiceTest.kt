@@ -111,6 +111,7 @@ class PlaceSearchServiceTest {
             latitude = 1.0,
             longitude = 10.0,
             placeTypeSummary = null,
+            normalizedCategoryKey = null,
             photoHint = null,
             placeDetailSummary = null,
             formattedPhoneNumber = null,

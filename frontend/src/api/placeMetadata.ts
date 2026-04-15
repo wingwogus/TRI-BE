@@ -4,6 +4,22 @@ export interface PlaceTypeSummary {
   localizedPrimaryLabel: string | null;
 }
 
+export type NormalizedPlaceCategoryKey =
+  | "KOREAN_FOOD"
+  | "JAPANESE_FOOD"
+  | "CHINESE_FOOD"
+  | "RESTAURANT"
+  | "CAFE"
+  | "BAKERY"
+  | "BAR"
+  | "ATTRACTION"
+  | "SHOPPING"
+  | "STAY"
+  | "PARK"
+  | "MUSEUM"
+  | "TRANSPORT"
+  | "ETC";
+
 export interface PlacePhotoHint {
   photoUri?: string | null;
   photoUrl?: string | null;

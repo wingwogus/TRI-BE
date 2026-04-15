@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import java.net.URI
 
 @RestController
 @RequestMapping("/api/v1/places")
@@ -42,6 +43,7 @@ class PlaceController(
                             localizedPrimaryLabel = summary.localizedPrimaryLabel,
                         )
                     },
+                    normalizedCategoryKey = it.normalizedCategoryKey?.name,
                     photoHint = it.photoHint?.let { hint ->
                         PlaceRequests.PhotoHintResponse(name = hint.name, photoUri = hint.photoUri)
                     },
@@ -76,6 +78,7 @@ class PlaceController(
                     placeTypeSummary = detail.placeTypeSummary?.let {
                         PlaceRequests.PlaceTypeSummaryResponse(it.primaryType, it.types, it.localizedPrimaryLabel)
                     },
+                    normalizedCategoryKey = detail.normalizedCategoryKey?.name,
                     photoHint = detail.photoHint?.let { hint -> PlaceRequests.PhotoHintResponse(hint.name, hint.photoUri) },
                     placeDetailSummary = detail.placeDetailSummary?.let {
                         PlaceRequests.PlaceDetailSummaryResponse(
@@ -100,10 +103,15 @@ class PlaceController(
     fun getPlacePhoto(
         @RequestParam name: String,
         @RequestParam(defaultValue = "320") maxWidthPx: Int,
-    ): ResponseEntity<ByteArrayResource> {
+    ): ResponseEntity<*> {
         val media = placeSearchService.getPhoto(name, maxWidthPx)
+        media.redirectUri?.let { redirectUri ->
+            return ResponseEntity.status(302)
+                .location(URI.create(redirectUri))
+                .build<Any>()
+        }
         return ResponseEntity.ok()
             .contentType(media.contentType?.let(MediaType::parseMediaType) ?: MediaType.IMAGE_JPEG)
-            .body(ByteArrayResource(media.bytes))
+            .body(ByteArrayResource(media.bytes ?: ByteArray(0)))
     }
 }

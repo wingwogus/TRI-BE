@@ -30,6 +30,7 @@ object TripReviewResponses {
         val latitude: Double,
         val longitude: Double,
         val placeTypeSummary: PlaceTypeSummaryResponse?,
+        val normalizedCategoryKey: String?,
         val photoHint: PhotoHintResponse?,
         val placeDetailSummary: PlaceDetailSummaryResponse?,
     )
@@ -58,6 +59,7 @@ object TripReviewResponses {
                         placeTypeSummary = it.placeTypeSummary?.let { summary ->
                             PlaceTypeSummaryResponse(summary.primaryType, summary.types, summary.localizedPrimaryLabel)
                         },
+                        normalizedCategoryKey = it.normalizedCategoryKey?.name,
                         photoHint = it.photoHint?.let { hint -> PhotoHintResponse(hint.name, hint.photoUri) },
                         placeDetailSummary = it.placeDetailSummary?.let { summary ->
                             PlaceDetailSummaryResponse(summary.businessStatus, summary.rating, summary.userRatingCount, summary.editorialSummary)

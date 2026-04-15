@@ -121,9 +121,9 @@ export const PlaceSearchModal = ({ isOpen, onClose, onAddPlace, countryCode, reg
                     <div className="min-w-0 flex-1">
                       <h5 className="font-medium text-foreground mb-2 truncate">{place.placeName}</h5>
                       <div className="flex flex-wrap items-center gap-2 mb-2">
-                        {getPlaceTypeLabel(place.placeTypeSummary) && (
+                        {getPlaceTypeLabel(place.placeTypeSummary, place.normalizedCategoryKey) && (
                           <Badge variant="secondary" className="font-medium">
-                            {getPlaceTypeLabel(place.placeTypeSummary)}
+                            {getPlaceTypeLabel(place.placeTypeSummary, place.normalizedCategoryKey)}
                           </Badge>
                         )}
                         {typeof place.placeDetailSummary?.rating === "number" && (

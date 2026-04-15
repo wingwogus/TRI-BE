@@ -351,9 +351,9 @@ const SortableDaySection = ({
                           <p className="text-xs text-muted-foreground mt-1">{item.time.split('T')[1]?.slice(0, 5)}</p>
                       )}
                       <div className="flex flex-wrap gap-1 mt-2">
-                        {getPlaceTypeLabel(item.placeTypeSummary) && (
+                        {getPlaceTypeLabel(item.placeTypeSummary, item.normalizedCategoryKey) && (
                           <Badge variant="secondary" className="text-[10px] font-medium">
-                            {getPlaceTypeLabel(item.placeTypeSummary)}
+                            {getPlaceTypeLabel(item.placeTypeSummary, item.normalizedCategoryKey)}
                           </Badge>
                         )}
                         {getOpeningStatusLabel(item.openingStatusWarning) && (
@@ -737,25 +737,20 @@ const TripPlanner = () => {
 
   const wishlistItems = wishlistData?.content || [];
 
-  const availablePlaceTypeFilters = useMemo(() => {
+  const availableWishlistTypeFilters = useMemo(() => {
     const keys = new Set<string>();
-    [...itineraryItems, ...wishlistItems].forEach((item) => {
-      const key = getPlaceTypeKey(item.placeTypeSummary);
+    wishlistItems.forEach((item) => {
+      const key = getPlaceTypeKey(item.placeTypeSummary, item.normalizedCategoryKey);
       if (key) {
         keys.add(key);
       }
     });
     return ["ALL", ...Array.from(keys)];
-  }, [itineraryItems, wishlistItems]);
+  }, [wishlistItems]);
 
   const filteredWishlistItems = useMemo(
-    () => wishlistItems.filter((item) => matchesPlaceTypeFilter(item.placeTypeSummary, selectedPlaceTypeFilter)),
+    () => wishlistItems.filter((item) => matchesPlaceTypeFilter(item.placeTypeSummary, selectedPlaceTypeFilter, item.normalizedCategoryKey)),
     [selectedPlaceTypeFilter, wishlistItems],
-  );
-
-  const filteredItineraryItems = useMemo(
-    () => itineraryItems.filter((item) => matchesPlaceTypeFilter(item.placeTypeSummary, selectedPlaceTypeFilter)),
-    [itineraryItems, selectedPlaceTypeFilter],
   );
 
   const daySections = useMemo(
@@ -770,12 +765,12 @@ const TripPlanner = () => {
           day,
           order: day,
           isDaySection: true,
-          itineraryItems: filteredItineraryItems
+          itineraryItems: itineraryItems
             .filter((item) => item.visitDay === day)
             .sort((a, b) => a.itemOrder - b.itemOrder),
         };
       }),
-    [filteredItineraryItems, totalDays],
+    [itineraryItems, totalDays],
   );
 
   const resolveExpenseDate = useCallback((visitDay?: number | null, fallbackDate?: string) => {
@@ -1792,25 +1787,6 @@ const TripPlanner = () => {
         </div>
       </header>
 
-      {availablePlaceTypeFilters.length > 1 && (
-        <div className="border-b bg-background/90 px-4 py-3 backdrop-blur md:px-6">
-          <div className="container mx-auto flex flex-wrap gap-2">
-            {availablePlaceTypeFilters.map((filterKey) => (
-              <Button
-                key={filterKey}
-                type="button"
-                size="sm"
-                variant={selectedPlaceTypeFilter === filterKey ? "default" : "outline"}
-                onClick={() => setSelectedPlaceTypeFilter(filterKey)}
-                className="h-8 rounded-full px-3"
-              >
-                {filterKey === "ALL" ? "전체" : getPlaceTypeLabelFromKey(filterKey)}
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Main Content */}
       <main className="relative flex flex-col md:flex-row w-full flex-1 min-h-0 overflow-hidden">
         {/* Mobile Drawer for Itinerary */}
@@ -2076,9 +2052,9 @@ const TripPlanner = () => {
           <ItineraryMap
             key={selectedDay}
             ref={mapRef}
-            items={filteredItineraryItems.filter(item => item.visitDay === selectedDay)}
+            items={itineraryItems.filter(item => item.visitDay === selectedDay)}
             days={Array.from({ length: totalDays }, (_, index) => index + 1)}
-            wishlistItems={filteredWishlistItems}
+            wishlistItems={wishlistItems}
             tripCountry={tripDetail?.country}
             tripRegionCode={tripDetail?.regionCode}
             onAddToItinerary={handleAddWishlistToItinerary}
@@ -2117,6 +2093,22 @@ const TripPlanner = () => {
                       className="h-9 text-sm"
                   />
                 </div>
+                {availableWishlistTypeFilters.length > 1 && (
+                  <div className="flex flex-wrap gap-2">
+                    {availableWishlistTypeFilters.map((filterKey) => (
+                      <Button
+                        key={filterKey}
+                        type="button"
+                        size="sm"
+                        variant={selectedPlaceTypeFilter === filterKey ? "default" : "outline"}
+                        onClick={() => setSelectedPlaceTypeFilter(filterKey)}
+                        className="h-8 rounded-full px-3"
+                      >
+                        {filterKey === "ALL" ? "전체" : getPlaceTypeLabelFromKey(filterKey)}
+                      </Button>
+                    ))}
+                  </div>
+                )}
                 <Button
                   onClick={() => {
                     setIsWishlistDrawerOpen(false);
@@ -2169,10 +2161,10 @@ const TripPlanner = () => {
                           <h5 className="font-medium text-foreground text-xs truncate">
                             {item.name}
                           </h5>
-                          {getPlaceTypeLabel(item.placeTypeSummary) && (
+                          {getPlaceTypeLabel(item.placeTypeSummary, item.normalizedCategoryKey) && (
                             <div className="mt-1">
                               <Badge variant="secondary" className="text-[10px] font-medium">
-                                {getPlaceTypeLabel(item.placeTypeSummary)}
+                                {getPlaceTypeLabel(item.placeTypeSummary, item.normalizedCategoryKey)}
                               </Badge>
                             </div>
                           )}
@@ -2298,6 +2290,22 @@ const TripPlanner = () => {
                       className="h-9 text-sm"
                   />
                 </div>
+                {availableWishlistTypeFilters.length > 1 && (
+                  <div className="flex flex-wrap gap-2">
+                    {availableWishlistTypeFilters.map((filterKey) => (
+                      <Button
+                        key={filterKey}
+                        type="button"
+                        size="sm"
+                        variant={selectedPlaceTypeFilter === filterKey ? "default" : "outline"}
+                        onClick={() => setSelectedPlaceTypeFilter(filterKey)}
+                        className="h-8 rounded-full px-3"
+                      >
+                        {filterKey === "ALL" ? "전체" : getPlaceTypeLabelFromKey(filterKey)}
+                      </Button>
+                    ))}
+                  </div>
+                )}
                 <Button
                   onClick={() => setShowPlaceSearchModal(true)}
                   className="w-full"
@@ -2346,10 +2354,10 @@ const TripPlanner = () => {
                           <h5 className="font-medium text-foreground text-sm mb-1 truncate">
                             {item.name}
                           </h5>
-                          {getPlaceTypeLabel(item.placeTypeSummary) && (
+                          {getPlaceTypeLabel(item.placeTypeSummary, item.normalizedCategoryKey) && (
                             <div className="mb-1">
                               <Badge variant="secondary" className="text-[10px] font-medium">
-                                {getPlaceTypeLabel(item.placeTypeSummary)}
+                                {getPlaceTypeLabel(item.placeTypeSummary, item.normalizedCategoryKey)}
                               </Badge>
                             </div>
                           )}

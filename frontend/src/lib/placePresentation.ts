@@ -1,4 +1,4 @@
-import type { PlacePhotoHint, PlaceTypeSummary } from "@/api/placeMetadata";
+import type { NormalizedPlaceCategoryKey, PlacePhotoHint, PlaceTypeSummary } from "@/api/placeMetadata";
 
 const OPENING_WARNING_LABELS: Record<string, string> = {
   OPEN: "영업 중",
@@ -8,7 +8,24 @@ const OPENING_WARNING_LABELS: Record<string, string> = {
   NO_HOURS_INFO: "영업시간 정보 없음",
 };
 
-const PLACE_TYPE_LABELS: Record<string, string> = {
+const NORMALIZED_CATEGORY_LABELS: Record<NormalizedPlaceCategoryKey, string> = {
+  KOREAN_FOOD: "한식",
+  JAPANESE_FOOD: "일식",
+  CHINESE_FOOD: "중식",
+  RESTAURANT: "식당",
+  CAFE: "카페",
+  BAKERY: "베이커리",
+  BAR: "바",
+  ATTRACTION: "관광지",
+  SHOPPING: "쇼핑",
+  STAY: "숙소",
+  PARK: "공원",
+  MUSEUM: "박물관",
+  TRANSPORT: "교통",
+  ETC: "기타",
+};
+
+const PLACE_TYPE_FALLBACK_LABELS: Record<string, string> = {
   restaurant: "식당",
   cafe: "카페",
   tourist_attraction: "관광지",
@@ -24,36 +41,42 @@ const PLACE_TYPE_LABELS: Record<string, string> = {
   train_station: "기차역",
   airport: "공항",
   bus_station: "버스터미널",
-  meal_takeaway: "포장",
-  meal_delivery: "배달",
-  night_club: "나이트라이프",
-  aquarium: "아쿠아리움",
-  amusement_park: "놀이공원",
-  campground: "캠핑장",
-  beach: "해변",
 };
 
-export const getPlaceTypeKey = (summary?: PlaceTypeSummary | null) =>
-  summary?.primaryType || summary?.types.find((type) => type in PLACE_TYPE_LABELS) || null;
+export const getPlaceTypeKey = (
+  summary?: PlaceTypeSummary | null,
+  normalizedCategoryKey?: NormalizedPlaceCategoryKey | null,
+) =>
+  normalizedCategoryKey
+  || summary?.types.find((type) => type in PLACE_TYPE_FALLBACK_LABELS)
+  || (summary?.primaryType && summary.primaryType in PLACE_TYPE_FALLBACK_LABELS ? summary.primaryType : null)
+  || summary?.primaryType
+  || null;
 
 export const getPlaceTypeLabelFromKey = (key?: string | null) =>
-  (key ? PLACE_TYPE_LABELS[key] : null) || key || null;
+  (key ? NORMALIZED_CATEGORY_LABELS[key as NormalizedPlaceCategoryKey] : null)
+  || (key ? PLACE_TYPE_FALLBACK_LABELS[key] : null)
+  || key
+  || null;
 
-export const getPlaceTypeLabel = (summary?: PlaceTypeSummary | null) =>
-  getPlaceTypeLabelFromKey(getPlaceTypeKey(summary)) || summary?.localizedPrimaryLabel || null;
+export const getPlaceTypeLabel = (
+  summary?: PlaceTypeSummary | null,
+  normalizedCategoryKey?: NormalizedPlaceCategoryKey | null,
+) =>
+  getPlaceTypeLabelFromKey(getPlaceTypeKey(summary, normalizedCategoryKey)) || summary?.localizedPrimaryLabel || null;
 
-export const getPlacePhotoUrl = (photoHint?: PlacePhotoHint | null) =>
-  photoHint?.photoUri || photoHint?.photoUrl || photoHint?.imageUrl || null;
+export const getPlacePhotoUrl = (_photoHint?: PlacePhotoHint | null) => null;
 
 export const matchesPlaceTypeFilter = (
   summary: PlaceTypeSummary | null | undefined,
   filterKey: string,
+  normalizedCategoryKey?: NormalizedPlaceCategoryKey | null,
 ) => {
   if (filterKey === "ALL") {
     return true;
   }
 
-  return getPlaceTypeKey(summary) === filterKey;
+  return getPlaceTypeKey(summary, normalizedCategoryKey) === filterKey;
 };
 
 export const getOpeningStatusLabel = (warning?: string | null) => {

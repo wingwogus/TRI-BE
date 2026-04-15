@@ -63,6 +63,7 @@ object ItemResponses {
         val memo: String?,
         val location: LocationResponse?,
         val placeTypeSummary: PlaceTypeSummaryResponse?,
+        val normalizedCategoryKey: String?,
         val photoHint: PhotoHintResponse?,
         val placeDetailSummary: PlaceDetailSummaryResponse?,
         val openingStatusWarning: String?,
@@ -81,6 +82,7 @@ object ItemResponses {
                 memo = view.memo,
                 location = view.location?.let(LocationResponse::from),
                 placeTypeSummary = view.placeTypeSummary?.let(PlaceTypeSummaryResponse::from),
+                normalizedCategoryKey = view.normalizedCategoryKey?.name,
                 photoHint = view.photoHint?.let(PhotoHintResponse::from),
                 placeDetailSummary = view.placeDetailSummary?.let {
                     PlaceDetailSummaryResponse(it.businessStatus, it.rating, it.userRatingCount, it.editorialSummary)

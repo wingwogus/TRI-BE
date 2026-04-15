@@ -40,6 +40,7 @@ object WishlistResponses {
         val latitude: BigDecimal,
         val longitude: BigDecimal,
         val placeTypeSummary: PlaceTypeSummaryResponse?,
+        val normalizedCategoryKey: String?,
         val photoHint: PhotoHintResponse?,
         val placeDetailSummary: PlaceDetailSummaryResponse?,
         val adder: AdderResponse,
@@ -55,6 +56,7 @@ object WishlistResponses {
                 item.placeTypeSummary?.let {
                     PlaceTypeSummaryResponse(it.primaryType, it.types, it.localizedPrimaryLabel)
                 },
+                item.normalizedCategoryKey?.name,
                 item.photoHint?.let { PhotoHintResponse(it.name, it.photoUri) },
                 item.placeDetailSummary?.let {
                     PlaceDetailSummaryResponse(it.businessStatus, it.rating, it.userRatingCount, it.editorialSummary)
