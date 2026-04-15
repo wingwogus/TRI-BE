@@ -3,6 +3,7 @@ package com.tribe.api.itinerary.item
 import com.tribe.api.exception.GlobalExceptionHandler
 import com.tribe.application.itinerary.item.ItemCommand
 import com.tribe.application.itinerary.item.ItemResult
+import com.tribe.application.itinerary.place.PlaceDetailSummary
 import com.tribe.application.itinerary.item.ItemService
 import com.tribe.application.itinerary.place.PlaceSearchResult
 import com.tribe.application.itinerary.place.RouteDetails
@@ -79,6 +80,29 @@ class ItemControllerTest(
     }
 
     @Test
+    fun `getAllItems keeps place detail summary response shape`() {
+        `when`(itemService.getAllItems(5L, null)).thenReturn(
+            listOf(
+                sampleItemView(
+                    placeDetailSummary = PlaceDetailSummary(
+                        businessStatus = "OPERATIONAL",
+                        rating = 4.7,
+                        userRatingCount = 128,
+                        editorialSummary = "Popular place",
+                    ),
+                ),
+            ),
+        )
+
+        mockMvc.perform(get("/api/v1/trips/5/items"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data[0].placeDetailSummary.businessStatus", equalTo("OPERATIONAL")))
+            .andExpect(jsonPath("$.data[0].placeDetailSummary.rating", equalTo(4.7)))
+            .andExpect(jsonPath("$.data[0].placeDetailSummary.userRatingCount", equalTo(128)))
+            .andExpect(jsonPath("$.data[0].placeDetailSummary.editorialSummary", equalTo("Popular place")))
+    }
+
+    @Test
     fun `updateItemOrder returns reordered items`() {
         `when`(
             itemService.updateItemOrder(
@@ -141,6 +165,7 @@ class ItemControllerTest(
     private fun sampleItemView(
         visitDay: Int = 1,
         itemOrder: Int = 3,
+        placeDetailSummary: PlaceDetailSummary? = null,
     ) = ItemResult.ItemView(
         itemId = 1L,
         tripId = 5L,
@@ -156,7 +181,7 @@ class ItemControllerTest(
         placeTypeSummary = null,
         normalizedCategoryKey = null,
         photoHint = null,
-        placeDetailSummary = null,
+        placeDetailSummary = placeDetailSummary,
         openingStatusWarning = null,
     )
 }

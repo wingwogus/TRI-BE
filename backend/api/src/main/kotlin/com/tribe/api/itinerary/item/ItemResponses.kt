@@ -1,41 +1,13 @@
 package com.tribe.api.itinerary.item
 
+import com.tribe.application.itinerary.place.PlaceTypeSummary
 import com.tribe.application.itinerary.place.RouteDetails
+import com.tribe.application.itinerary.place.PlaceDetailSummary
 import com.tribe.application.itinerary.item.ItemResult
-import com.tribe.api.itinerary.place.PlaceRequests
+import com.tribe.api.itinerary.place.PlaceResponses
 import java.time.LocalDateTime
 
 object ItemResponses {
-    data class PlaceTypeSummaryResponse(
-        val primaryType: String?,
-        val types: List<String>,
-        val localizedPrimaryLabel: String?,
-    ) {
-        companion object {
-            fun from(summary: ItemResult.PlaceTypeSummary) = PlaceTypeSummaryResponse(
-                primaryType = summary.primaryType,
-                types = summary.types,
-                localizedPrimaryLabel = summary.localizedPrimaryLabel,
-            )
-        }
-    }
-
-    data class PhotoHintResponse(
-        val name: String?,
-        val photoUri: String?,
-    ) {
-        companion object {
-            fun from(hint: ItemResult.PhotoHint) = PhotoHintResponse(name = hint.name, photoUri = hint.photoUri)
-        }
-    }
-
-    data class PlaceDetailSummaryResponse(
-        val businessStatus: String?,
-        val rating: Double?,
-        val userRatingCount: Int?,
-        val editorialSummary: String?,
-    )
-
     data class LocationResponse(
         val lat: Double,
         val lng: Double,
@@ -62,10 +34,10 @@ object ItemResponses {
         val time: LocalDateTime?,
         val memo: String?,
         val location: LocationResponse?,
-        val placeTypeSummary: PlaceTypeSummaryResponse?,
+        val placeTypeSummary: PlaceResponses.PlaceTypeSummaryResponse?,
         val normalizedCategoryKey: String?,
-        val photoHint: PhotoHintResponse?,
-        val placeDetailSummary: PlaceDetailSummaryResponse?,
+        val photoHint: PlaceResponses.PhotoHintResponse?,
+        val placeDetailSummary: PlaceResponses.PlaceDetailSummaryResponse?,
         val openingStatusWarning: String?,
     ) {
         companion object {
@@ -81,12 +53,10 @@ object ItemResponses {
                 time = view.time,
                 memo = view.memo,
                 location = view.location?.let(LocationResponse::from),
-                placeTypeSummary = view.placeTypeSummary?.let(PlaceTypeSummaryResponse::from),
+                placeTypeSummary = view.placeTypeSummary?.let(PlaceResponses.PlaceTypeSummaryResponse::from),
                 normalizedCategoryKey = view.normalizedCategoryKey?.name,
-                photoHint = view.photoHint?.let(PhotoHintResponse::from),
-                placeDetailSummary = view.placeDetailSummary?.let {
-                    PlaceDetailSummaryResponse(it.businessStatus, it.rating, it.userRatingCount, it.editorialSummary)
-                },
+                photoHint = view.photoHint?.let { PlaceResponses.PhotoHintResponse(it.name, it.photoUri) },
+                placeDetailSummary = view.placeDetailSummary?.let(PlaceResponses.PlaceDetailSummaryResponse::from),
                 openingStatusWarning = view.openingStatusWarning,
             )
         }
@@ -94,8 +64,8 @@ object ItemResponses {
 
     data class RouteDetailsResponse(
         val travelMode: String,
-        val originPlace: PlaceRequests.SearchResponse,
-        val destinationPlace: PlaceRequests.SearchResponse,
+        val originPlace: PlaceResponses.SearchResponse,
+        val destinationPlace: PlaceResponses.SearchResponse,
         val totalDuration: String,
         val totalDistance: String,
         val steps: List<RouteStepResponse>,
@@ -103,14 +73,14 @@ object ItemResponses {
         companion object {
             fun from(route: RouteDetails) = RouteDetailsResponse(
                 travelMode = route.travelMode,
-                originPlace = PlaceRequests.SearchResponse(
+                originPlace = PlaceResponses.SearchResponse(
                     externalPlaceId = route.originPlace.externalPlaceId,
                     placeName = route.originPlace.placeName,
                     address = route.originPlace.address,
                     latitude = route.originPlace.latitude,
                     longitude = route.originPlace.longitude,
                 ),
-                destinationPlace = PlaceRequests.SearchResponse(
+                destinationPlace = PlaceResponses.SearchResponse(
                     externalPlaceId = route.destinationPlace.externalPlaceId,
                     placeName = route.destinationPlace.placeName,
                     address = route.destinationPlace.address,

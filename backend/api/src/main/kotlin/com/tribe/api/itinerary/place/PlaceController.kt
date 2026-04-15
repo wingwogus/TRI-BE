@@ -26,35 +26,20 @@ class PlaceController(
         @RequestParam(required = false) longitude: Double?,
         @RequestParam(required = false) radiusMeters: Int?,
         @RequestParam(required = false) regionContextKey: String?,
-    ): ResponseEntity<ApiResponse<List<PlaceRequests.SearchResponse>>> {
+    ): ResponseEntity<ApiResponse<List<PlaceResponses.SearchResponse>>> {
         val result = placeSearchService.search(query, language, region, latitude, longitude, radiusMeters, regionContextKey)
             .map {
-                PlaceRequests.SearchResponse(
+                PlaceResponses.SearchResponse(
                     placeId = it.placeId,
                     externalPlaceId = it.externalPlaceId,
                     placeName = it.placeName,
                     address = it.address,
                     latitude = it.latitude,
                     longitude = it.longitude,
-                    placeTypeSummary = it.placeTypeSummary?.let { summary ->
-                        PlaceRequests.PlaceTypeSummaryResponse(
-                            primaryType = summary.primaryType,
-                            types = summary.types,
-                            localizedPrimaryLabel = summary.localizedPrimaryLabel,
-                        )
-                    },
+                    placeTypeSummary = it.placeTypeSummary?.let(PlaceResponses.PlaceTypeSummaryResponse::from),
                     normalizedCategoryKey = it.normalizedCategoryKey?.name,
-                    photoHint = it.photoHint?.let { hint ->
-                        PlaceRequests.PhotoHintResponse(name = hint.name, photoUri = hint.photoUri)
-                    },
-                    placeDetailSummary = it.placeDetailSummary?.let { summary ->
-                        PlaceRequests.PlaceDetailSummaryResponse(
-                            businessStatus = summary.businessStatus,
-                            rating = summary.rating,
-                            userRatingCount = summary.userRatingCount,
-                            editorialSummary = summary.editorialSummary,
-                        )
-                    },
+                    photoHint = it.photoHint?.let(PlaceResponses.PhotoHintResponse::from),
+                    placeDetailSummary = it.placeDetailSummary?.let(PlaceResponses.PlaceDetailSummaryResponse::from),
                 )
             }
         return ResponseEntity.ok(ApiResponse.ok(result))
@@ -64,30 +49,21 @@ class PlaceController(
     fun getPlaceDetail(
         @PathVariable placeId: Long,
         @RequestParam(defaultValue = "ko") language: String,
-    ): ResponseEntity<ApiResponse<PlaceRequests.DetailResponse>> {
+    ): ResponseEntity<ApiResponse<PlaceResponses.DetailResponse>> {
         val detail = placeSearchService.getPlaceDetail(placeId, language)
         return ResponseEntity.ok(
             ApiResponse.ok(
-                PlaceRequests.DetailResponse(
+                PlaceResponses.DetailResponse(
                     placeId = detail.placeId,
                     externalPlaceId = detail.externalPlaceId,
                     placeName = detail.placeName,
                     address = detail.address,
                     latitude = detail.latitude,
                     longitude = detail.longitude,
-                    placeTypeSummary = detail.placeTypeSummary?.let {
-                        PlaceRequests.PlaceTypeSummaryResponse(it.primaryType, it.types, it.localizedPrimaryLabel)
-                    },
+                    placeTypeSummary = detail.placeTypeSummary?.let(PlaceResponses.PlaceTypeSummaryResponse::from),
                     normalizedCategoryKey = detail.normalizedCategoryKey?.name,
-                    photoHint = detail.photoHint?.let { hint -> PlaceRequests.PhotoHintResponse(hint.name, hint.photoUri) },
-                    placeDetailSummary = detail.placeDetailSummary?.let {
-                        PlaceRequests.PlaceDetailSummaryResponse(
-                            businessStatus = it.businessStatus,
-                            rating = it.rating,
-                            userRatingCount = it.userRatingCount,
-                            editorialSummary = it.editorialSummary,
-                        )
-                    },
+                    photoHint = detail.photoHint?.let(PlaceResponses.PhotoHintResponse::from),
+                    placeDetailSummary = detail.placeDetailSummary?.let(PlaceResponses.PlaceDetailSummaryResponse::from),
                     formattedPhoneNumber = detail.formattedPhoneNumber,
                     internationalPhoneNumber = detail.internationalPhoneNumber,
                     websiteUri = detail.websiteUri,

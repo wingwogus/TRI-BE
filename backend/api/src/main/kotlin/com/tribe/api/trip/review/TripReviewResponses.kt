@@ -1,27 +1,10 @@
 package com.tribe.api.trip.review
 
+import com.tribe.api.itinerary.place.PlaceResponses
 import com.tribe.application.trip.review.TripReviewResult
 import java.time.LocalDateTime
 
 object TripReviewResponses {
-    data class PlaceTypeSummaryResponse(
-        val primaryType: String?,
-        val types: List<String>,
-        val localizedPrimaryLabel: String?,
-    )
-
-    data class PhotoHintResponse(
-        val name: String?,
-        val photoUri: String?,
-    )
-
-    data class PlaceDetailSummaryResponse(
-        val businessStatus: String?,
-        val rating: Double?,
-        val userRatingCount: Int?,
-        val editorialSummary: String?,
-    )
-
     data class RecommendedPlaceResponse(
         val placeId: Long,
         val externalPlaceId: String,
@@ -29,10 +12,10 @@ object TripReviewResponses {
         val address: String?,
         val latitude: Double,
         val longitude: Double,
-        val placeTypeSummary: PlaceTypeSummaryResponse?,
+        val placeTypeSummary: PlaceResponses.PlaceTypeSummaryResponse?,
         val normalizedCategoryKey: String?,
-        val photoHint: PhotoHintResponse?,
-        val placeDetailSummary: PlaceDetailSummaryResponse?,
+        val photoHint: PlaceResponses.PhotoHintResponse?,
+        val placeDetailSummary: PlaceResponses.PlaceDetailSummaryResponse?,
     )
 
     data class ReviewDetailResponse(
@@ -56,14 +39,10 @@ object TripReviewResponses {
                         address = it.address,
                         latitude = it.latitude,
                         longitude = it.longitude,
-                        placeTypeSummary = it.placeTypeSummary?.let { summary ->
-                            PlaceTypeSummaryResponse(summary.primaryType, summary.types, summary.localizedPrimaryLabel)
-                        },
+                        placeTypeSummary = it.placeTypeSummary?.let(PlaceResponses.PlaceTypeSummaryResponse::from),
                         normalizedCategoryKey = it.normalizedCategoryKey?.name,
-                        photoHint = it.photoHint?.let { hint -> PhotoHintResponse(hint.name, hint.photoUri) },
-                        placeDetailSummary = it.placeDetailSummary?.let { summary ->
-                            PlaceDetailSummaryResponse(summary.businessStatus, summary.rating, summary.userRatingCount, summary.editorialSummary)
-                        },
+                        photoHint = it.photoHint?.let { hint -> PlaceResponses.PhotoHintResponse(hint.name, hint.photoUri) },
+                        placeDetailSummary = it.placeDetailSummary?.let(PlaceResponses.PlaceDetailSummaryResponse::from),
                     )
                 },
             )

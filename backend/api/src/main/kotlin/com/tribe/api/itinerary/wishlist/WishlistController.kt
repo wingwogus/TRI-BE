@@ -1,7 +1,6 @@
 package com.tribe.api.itinerary.wishlist
 
 import com.tribe.api.common.ApiResponse
-import com.tribe.api.itinerary.place.PlaceRequests
 import com.tribe.application.itinerary.wishlist.WishlistCommand
 import com.tribe.application.itinerary.wishlist.WishlistService
 import org.springframework.data.domain.Pageable
@@ -24,7 +23,7 @@ class WishlistController(
     @PostMapping
     fun addWishlistItem(
         @PathVariable tripId: Long,
-        @RequestBody request: PlaceRequests.WishlistAddRequest,
+        @RequestBody request: WishlistRequests.WishlistAddRequest,
     ): ResponseEntity<ApiResponse<WishlistResponses.WishlistItemResponse>> {
         val result = wishlistService.addWishList(
             WishlistCommand.Add(
@@ -57,7 +56,7 @@ class WishlistController(
     @DeleteMapping
     fun deleteWishlistItems(
         @PathVariable tripId: Long,
-        @RequestBody request: PlaceRequests.WishlistDeleteRequest,
+        @RequestBody request: WishlistRequests.WishlistDeleteRequest,
     ): ResponseEntity<ApiResponse<Unit>> {
         wishlistService.deleteWishlistItems(WishlistCommand.Delete(tripId, request.wishlistItemIds))
         return ResponseEntity.ok(ApiResponse.empty(Unit))

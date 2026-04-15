@@ -7,12 +7,6 @@ interface PlaceSearchGateway {
     fun directions(originPlaceId: String, destinationPlaceId: String, travelMode: String): RouteDetails?
 }
 
-data class PlaceTypeSummary(
-    val primaryType: String?,
-    val types: List<String>,
-    val localizedPrimaryLabel: String?,
-)
-
 data class PlacePhotoHint(
     val name: String?,
     val photoUri: String? = null,

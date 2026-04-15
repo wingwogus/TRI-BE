@@ -1,48 +1,17 @@
 package com.tribe.application.itinerary.wishlist
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.tribe.application.itinerary.place.PlaceCategoryNormalizer
+import com.tribe.application.itinerary.place.PlaceDetailSummary
+import com.tribe.application.itinerary.place.PlaceTypeSummary
+import com.tribe.application.itinerary.place.PlaceTypeSummaryFactory
 import com.tribe.application.itinerary.place.NormalizedPlaceCategoryKey
 import com.tribe.domain.itinerary.wishlist.WishlistItem
 import java.math.BigDecimal
 
 object WishlistResult {
-    private val objectMapper = jacksonObjectMapper()
-
-    private fun decodeTypes(json: String?): List<String> =
-        json?.let {
-            runCatching { objectMapper.readValue(it, Array<String>::class.java).toList() }.getOrDefault(emptyList())
-        } ?: emptyList()
-
-    private fun toPlaceTypeSummary(primaryType: String?, googleTypesJson: String?): PlaceTypeSummary? {
-        val types = decodeTypes(googleTypesJson)
-        if (primaryType == null && types.isEmpty()) {
-            return null
-        }
-
-        return PlaceTypeSummary(
-            primaryType = primaryType,
-            types = types,
-            localizedPrimaryLabel = primaryType?.replace('_', ' '),
-        )
-    }
-
-    data class PlaceTypeSummary(
-        val primaryType: String?,
-        val types: List<String>,
-        val localizedPrimaryLabel: String?,
-    )
-
     data class PhotoHint(
         val name: String?,
         val photoUri: String?,
-    )
-
-    data class PlaceDetailSummary(
-        val businessStatus: String?,
-        val rating: Double?,
-        val userRatingCount: Int?,
-        val editorialSummary: String?,
     )
 
     data class Adder(
@@ -66,6 +35,7 @@ object WishlistResult {
     ) {
         companion object {
             fun from(entity: WishlistItem): Item {
+                val googleTypes = PlaceTypeSummaryFactory.decodeGoogleTypes(entity.place.googleTypesJson)
                 return Item(
                     wishlistItemId = entity.id,
                     placeId = entity.place.id,
@@ -73,10 +43,10 @@ object WishlistResult {
                     address = entity.place.address,
                     latitude = entity.place.latitude,
                     longitude = entity.place.longitude,
-                    placeTypeSummary = toPlaceTypeSummary(entity.place.googlePrimaryType, entity.place.googleTypesJson),
+                    placeTypeSummary = PlaceTypeSummaryFactory.fromRawTypes(entity.place.googlePrimaryType, googleTypes),
                     normalizedCategoryKey = PlaceCategoryNormalizer.normalize(
                         entity.place.googlePrimaryType,
-                        decodeTypes(entity.place.googleTypesJson),
+                        googleTypes,
                     ),
                     photoHint = null,
                     placeDetailSummary = entity.place.detailSnapshot?.let {

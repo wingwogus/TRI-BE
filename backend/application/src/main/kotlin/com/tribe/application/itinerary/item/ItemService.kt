@@ -97,8 +97,8 @@ class ItemService(
             }
         }
         command.title?.let { item.title = normalizeNullableText(it) }
-        command.time?.let { item.time = it }
-        command.memo?.let { item.memo = normalizeNullableText(it) }
+        item.time = command.time
+        item.memo = normalizeNullableText(command.memo)
 
         val result = toItemView(item)
         tripRealtimeEventPublisher.publish(
@@ -187,13 +187,9 @@ class ItemService(
     }
 
     private fun toItemView(item: ItineraryItem): ItemResult.ItemView {
-        val placeTypeSummary = placeViewAssembler.toPlaceTypeSummary(item.place)?.let {
-            ItemResult.PlaceTypeSummary(it.primaryType, it.types, it.localizedPrimaryLabel)
-        }
+        val placeTypeSummary = placeViewAssembler.toPlaceTypeSummary(item.place)
         val photoHint = placeViewAssembler.toPhotoHint(item.place)?.let { ItemResult.PhotoHint(it.name, it.photoUri) }
-        val placeDetailSummary = placeViewAssembler.toDetailSummary(item.place)?.let {
-            ItemResult.PlaceDetailSummary(it.businessStatus, it.rating, it.userRatingCount, it.editorialSummary)
-        }
+        val placeDetailSummary = placeViewAssembler.toDetailSummary(item.place)
         val openingStatus = if (item.place != null) {
             openingHoursEvaluator.evaluate(item, item.trip.startDate)
         } else {

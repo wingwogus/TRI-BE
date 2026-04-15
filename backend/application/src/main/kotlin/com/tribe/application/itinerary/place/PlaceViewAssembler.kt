@@ -1,16 +1,7 @@
 package com.tribe.application.itinerary.place
 
-import com.fasterxml.jackson.core.type.TypeReference
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.tribe.domain.itinerary.place.Place
 import org.springframework.stereotype.Component
-
-data class PlaceDetailSummary(
-    val businessStatus: String?,
-    val rating: Double?,
-    val userRatingCount: Int?,
-    val editorialSummary: String?,
-)
 
 data class PlaceDetailView(
     val placeId: Long,
@@ -32,9 +23,7 @@ data class PlaceDetailView(
 )
 
 @Component
-class PlaceViewAssembler(
-    private val objectMapper: ObjectMapper,
-) {
+class PlaceViewAssembler {
     fun toNormalizedCategoryKey(place: Place?): NormalizedPlaceCategoryKey? =
         toPlaceTypeSummary(place)?.let { summary ->
             PlaceCategoryNormalizer.normalize(summary.primaryType, summary.types)
@@ -42,21 +31,8 @@ class PlaceViewAssembler(
 
     fun toPlaceTypeSummary(place: Place?): PlaceTypeSummary? {
         if (place == null) return null
-        val types = place.googleTypesJson?.let { payload ->
-            runCatching {
-                objectMapper.readValue(payload, object : TypeReference<List<String>>() {})
-            }.getOrDefault(emptyList())
-        } ?: emptyList()
-
-        return if (place.googlePrimaryType == null && types.isEmpty()) {
-            null
-        } else {
-            PlaceTypeSummary(
-                primaryType = place.googlePrimaryType,
-                types = types,
-                localizedPrimaryLabel = place.googlePrimaryType?.replace('_', ' '),
-            )
-        }
+        val types = PlaceTypeSummaryFactory.decodeGoogleTypes(place.googleTypesJson)
+        return PlaceTypeSummaryFactory.fromRawTypes(place.googlePrimaryType, types)
     }
 
     fun toPhotoHint(place: Place?): PlacePhotoHint? = null

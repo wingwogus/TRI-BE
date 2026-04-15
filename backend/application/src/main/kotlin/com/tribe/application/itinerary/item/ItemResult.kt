@@ -2,26 +2,15 @@ package com.tribe.application.itinerary.item
 
 import com.tribe.application.itinerary.place.NormalizedPlaceCategoryKey
 import com.tribe.application.itinerary.place.PlaceCategoryNormalizer
+import com.tribe.application.itinerary.place.PlaceDetailSummary
+import com.tribe.application.itinerary.place.PlaceTypeSummary
 import com.tribe.domain.itinerary.item.ItineraryItem
 import java.time.LocalDateTime
 
 object ItemResult {
-    data class PlaceTypeSummary(
-        val primaryType: String?,
-        val types: List<String>,
-        val localizedPrimaryLabel: String?,
-    )
-
     data class PhotoHint(
         val name: String?,
         val photoUri: String? = null,
-    )
-
-    data class PlaceDetailSummary(
-        val businessStatus: String?,
-        val rating: Double?,
-        val userRatingCount: Int?,
-        val editorialSummary: String?,
     )
 
     data class LocationInfo(

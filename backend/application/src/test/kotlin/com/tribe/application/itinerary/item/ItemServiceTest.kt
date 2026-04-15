@@ -148,6 +148,71 @@ class ItemServiceTest {
     }
 
     @Test
+    fun `updateItem clears time and memo when null is provided`() {
+        val fixture = fixture()
+        val item = ItineraryItem(
+            trip = fixture.trip,
+            visitDay = 1,
+            place = null,
+            title = "Lunch",
+            time = LocalDateTime.of(2026, 4, 12, 13, 0),
+            order = 1,
+            memo = "Window seat",
+        )
+        ReflectionTestUtils.setField(item, "id", 55L)
+
+        `when`(currentActor.requireUserId()).thenReturn(fixture.member.id)
+        `when`(tripMemberRepository.findByTripIdAndMemberId(fixture.trip.id, fixture.member.id)).thenReturn(fixture.tripMember)
+        `when`(itineraryItemRepository.findById(55L)).thenReturn(Optional.of(item))
+
+        val result = itemService.updateItem(
+            ItemCommand.Update(
+                tripId = fixture.trip.id,
+                itemId = 55L,
+                time = null,
+                memo = null,
+            ),
+        )
+
+        assertEquals(null, result.time)
+        assertEquals(null, result.memo)
+    }
+
+    @Test
+    fun `getItem passes through null opening status`() {
+        val fixture = fixture()
+        val place = Place("place-1", "Cafe", "addr", java.math.BigDecimal.ONE, java.math.BigDecimal.TEN)
+        val item = ItineraryItem(fixture.trip, 1, place, null, null, 1, null)
+        ReflectionTestUtils.setField(item, "id", 55L)
+
+        `when`(currentActor.requireUserId()).thenReturn(fixture.member.id)
+        `when`(tripMemberRepository.findByTripIdAndMemberId(fixture.trip.id, fixture.member.id)).thenReturn(fixture.tripMember)
+        `when`(itineraryItemRepository.findById(55L)).thenReturn(Optional.of(item))
+        `when`(openingHoursEvaluator.evaluate(item, fixture.trip.startDate)).thenReturn(null)
+
+        val result = itemService.getItem(fixture.trip.id, 55L)
+
+        assertEquals(null, result.openingStatusWarning)
+    }
+
+    @Test
+    fun `getItem keeps visible opening status values`() {
+        val fixture = fixture()
+        val place = Place("place-1", "Cafe", "addr", java.math.BigDecimal.ONE, java.math.BigDecimal.TEN)
+        val item = ItineraryItem(fixture.trip, 1, place, null, null, 1, null)
+        ReflectionTestUtils.setField(item, "id", 56L)
+
+        `when`(currentActor.requireUserId()).thenReturn(fixture.member.id)
+        `when`(tripMemberRepository.findByTripIdAndMemberId(fixture.trip.id, fixture.member.id)).thenReturn(fixture.tripMember)
+        `when`(itineraryItemRepository.findById(56L)).thenReturn(Optional.of(item))
+        `when`(openingHoursEvaluator.evaluate(item, fixture.trip.startDate)).thenReturn("CLOSED_DAY_POSSIBLE")
+
+        val result = itemService.getItem(fixture.trip.id, 56L)
+
+        assertEquals("CLOSED_DAY_POSSIBLE", result.openingStatusWarning)
+    }
+
+    @Test
     fun `updateItemOrder moves items across days and order`() {
         val fixture = fixture()
         val item = ItineraryItem(fixture.trip, 1, null, "Lunch", null, 1, null)

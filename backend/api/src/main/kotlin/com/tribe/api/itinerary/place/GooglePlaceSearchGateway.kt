@@ -13,6 +13,7 @@ import com.tribe.application.itinerary.place.PlaceSearchGateway
 import com.tribe.application.itinerary.place.PlaceSearchResult
 import com.tribe.application.itinerary.place.PlaceCategoryNormalizer
 import com.tribe.application.itinerary.place.PlaceTypeSummary
+import com.tribe.application.itinerary.place.PlaceTypeSummaryFactory
 import com.tribe.application.itinerary.place.RegularOpeningPeriodInput
 import com.tribe.application.itinerary.place.RouteDetails
 import org.slf4j.LoggerFactory
@@ -73,11 +74,7 @@ class GooglePlaceSearchGateway(
                 address = it.formattedAddress ?: "주소 정보 없음",
                 latitude = it.location?.latitude ?: 0.0,
                 longitude = it.location?.longitude ?: 0.0,
-                placeTypeSummary = PlaceTypeSummary(
-                    primaryType = it.primaryType,
-                    types = it.types ?: emptyList(),
-                    localizedPrimaryLabel = it.primaryType?.replace('_', ' '),
-                ),
+                placeTypeSummary = PlaceTypeSummaryFactory.fromRawTypes(it.primaryType, it.types ?: emptyList()),
                 normalizedCategoryKey = PlaceCategoryNormalizer.normalize(it.primaryType, it.types ?: emptyList()),
             )
         } ?: emptyList()
@@ -106,11 +103,7 @@ class GooglePlaceSearchGateway(
             address = response.formattedAddress ?: "주소 정보 없음",
             latitude = response.location?.latitude ?: 0.0,
             longitude = response.location?.longitude ?: 0.0,
-            placeTypeSummary = PlaceTypeSummary(
-                primaryType = response.primaryType,
-                types = response.types ?: emptyList(),
-                localizedPrimaryLabel = response.primaryType?.replace('_', ' '),
-            ),
+            placeTypeSummary = PlaceTypeSummaryFactory.fromRawTypes(response.primaryType, response.types ?: emptyList()),
             normalizedCategoryKey = PlaceCategoryNormalizer.normalize(response.primaryType, response.types ?: emptyList()),
             businessStatus = response.businessStatus,
             utcOffsetMinutes = response.utcOffsetMinutes,
