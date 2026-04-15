@@ -11,7 +11,9 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.OneToMany
+import jakarta.persistence.OneToOne
 import java.math.BigDecimal
+import java.time.LocalDateTime
 
 @Entity
 class Place(
@@ -24,6 +26,18 @@ class Place(
     val latitude: BigDecimal,
     @Column(precision = 10, scale = 7)
     val longitude: BigDecimal,
+    @Column(name = "google_primary_type")
+    var googlePrimaryType: String? = null,
+    @Column(name = "google_types_json", columnDefinition = "TEXT")
+    var googleTypesJson: String? = null,
+    @Column(name = "business_status")
+    var businessStatus: String? = null,
+    @Column(name = "utc_offset_minutes")
+    var utcOffsetMinutes: Int? = null,
+    @Column(name = "type_summary_synced_at")
+    var typeSummarySyncedAt: LocalDateTime? = null,
+    @Column(name = "details_synced_at")
+    var detailsSyncedAt: LocalDateTime? = null,
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,4 +52,10 @@ class Place(
 
     @OneToMany(mappedBy = "place", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
     val recommendedPlaces: MutableList<RecommendedPlace> = mutableListOf()
+
+    @OneToOne(mappedBy = "place", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+    var detailSnapshot: PlaceDetailSnapshot? = null
+
+    @OneToMany(mappedBy = "place", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+    val regularOpeningPeriods: MutableList<PlaceRegularOpeningPeriod> = mutableListOf()
 }

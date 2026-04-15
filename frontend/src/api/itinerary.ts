@@ -1,4 +1,5 @@
 import { authenticatedAxios, type ApiResponse } from "@/api/http";
+import type { PlaceDetailSummary, PlacePhotoHint, PlaceTypeSummary } from "@/api/placeMetadata";
 
 export interface CreateItineraryRequest {
   visitDay?: number | null;
@@ -67,12 +68,6 @@ export interface LocationInfo {
   address: string | null;
 }
 
-export interface PlaceTypeSummary {
-  primaryType: string | null;
-  types: string[];
-  localizedPrimaryLabel: string | null;
-}
-
 export interface ItineraryResponse {
   itineraryId: number;
   visitDay: number;
@@ -85,6 +80,8 @@ export interface ItineraryResponse {
   memo: string | null;
   location: LocationInfo | null;
   placeTypeSummary?: PlaceTypeSummary | null;
+  photoHint?: PlacePhotoHint | null;
+  placeDetailSummary?: PlaceDetailSummary | null;
   openingStatusWarning?: string | null;
 }
 
@@ -102,6 +99,8 @@ interface BackendItinerary {
   memo: string | null;
   location: LocationInfo | null;
   placeTypeSummary?: PlaceTypeSummary | null;
+  photoHint?: PlacePhotoHint | null;
+  placeDetailSummary?: PlaceDetailSummary | null;
   openingStatusWarning?: string | null;
 }
 
@@ -117,6 +116,8 @@ const toItinerary = (item: BackendItinerary): ItineraryResponse => ({
   memo: item.memo,
   location: item.location,
   placeTypeSummary: item.placeTypeSummary ?? null,
+  photoHint: item.photoHint ?? null,
+  placeDetailSummary: item.placeDetailSummary ?? null,
   openingStatusWarning: item.openingStatusWarning ?? null,
 });
 

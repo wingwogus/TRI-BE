@@ -4,7 +4,10 @@ import {Dialog, DialogContent, DialogHeader, DialogTitle,} from "@/components/ui
 import {Input} from "@/components/ui/input";
 import {Button} from "@/components/ui/button";
 import {placesApi, PlaceSearchResult} from "@/api/places";
+import {Badge} from "@/components/ui/badge";
 import {useToast} from "@/hooks/use-toast";
+import {getCountryCoordinates} from "@/lib/countryCoordinates";
+import {getPlacePhotoUrl, getPlaceTypeLabel} from "@/lib/placePresentation";
 
 interface PlaceSearchModalProps {
   isOpen: boolean;
@@ -35,7 +38,15 @@ export const PlaceSearchModal = ({ isOpen, onClose, onAddPlace, region }: PlaceS
     
     setIsLoading(true);
     try {
-      const results = await placesApi.searchPlaces(searchQuery, region);
+      const [latitude, longitude] = region ? getCountryCoordinates(region) : [undefined, undefined];
+      const results = await placesApi.searchPlaces(
+        searchQuery,
+        region,
+        latitude,
+        longitude,
+        500000,
+        region ? `country:${region}` : undefined,
+      );
       setPlaces(results);
     } catch (error) {
       toast({
@@ -91,11 +102,35 @@ export const PlaceSearchModal = ({ isOpen, onClose, onAddPlace, region }: PlaceS
                 key={place.externalPlaceId}
                 className="p-4 bg-gradient-subtle rounded-lg border hover:shadow-soft transition-all duration-200"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h5 className="font-medium text-foreground mb-2">{place.placeName}</h5>
-                    <div className="text-sm text-muted-foreground">
-                      <p>{place.address}</p>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-1 gap-4 min-w-0">
+                    {getPlacePhotoUrl(place.photoHint) && (
+                      <img
+                        src={getPlacePhotoUrl(place.photoHint) || undefined}
+                        alt={place.placeName}
+                        className="h-16 w-16 rounded-lg object-cover border shrink-0"
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <h5 className="font-medium text-foreground mb-2 truncate">{place.placeName}</h5>
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        {getPlaceTypeLabel(place.placeTypeSummary) && (
+                          <Badge variant="secondary" className="font-medium">
+                            {getPlaceTypeLabel(place.placeTypeSummary)}
+                          </Badge>
+                        )}
+                        {typeof place.placeDetailSummary?.rating === "number" && (
+                          <Badge variant="outline" className="font-medium">
+                            평점 {place.placeDetailSummary.rating.toFixed(1)}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        <p className="line-clamp-2">{place.address}</p>
+                        {place.placeDetailSummary?.editorialSummary && (
+                          <p className="line-clamp-2 mt-1">{place.placeDetailSummary.editorialSummary}</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <Button

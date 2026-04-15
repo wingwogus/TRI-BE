@@ -111,8 +111,20 @@ class ItemControllerTest(
             listOf(
                 RouteDetails(
                     travelMode = "WALKING",
-                    originPlace = PlaceSearchResult("origin", "Origin", "addr1", 0.0, 0.0),
-                    destinationPlace = PlaceSearchResult("dest", "Destination", "addr2", 1.0, 1.0),
+                    originPlace = PlaceSearchResult(
+                        externalPlaceId = "origin",
+                        placeName = "Origin",
+                        address = "addr1",
+                        latitude = 0.0,
+                        longitude = 0.0,
+                    ),
+                    destinationPlace = PlaceSearchResult(
+                        externalPlaceId = "dest",
+                        placeName = "Destination",
+                        address = "addr2",
+                        latitude = 1.0,
+                        longitude = 1.0,
+                    ),
                     totalDuration = "10 mins",
                     totalDistance = "1 km",
                     steps = emptyList(),
@@ -142,6 +154,8 @@ class ItemControllerTest(
         memo = "Booked",
         location = null,
         placeTypeSummary = null,
+        photoHint = null,
+        placeDetailSummary = null,
         openingStatusWarning = null,
     )
 }

@@ -1,14 +1,23 @@
 package com.tribe.api.itinerary.place
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.tribe.application.exception.ErrorCode
 import com.tribe.application.exception.business.BusinessException
+import com.tribe.application.itinerary.place.PlaceDetailsResult
+import com.tribe.application.itinerary.place.PlacePhotoHint
+import com.tribe.application.itinerary.place.PlacePhotoMedia
+import com.tribe.application.itinerary.place.PlaceSearchContext
 import com.tribe.application.itinerary.place.PlaceSearchGateway
 import com.tribe.application.itinerary.place.PlaceSearchResult
+import com.tribe.application.itinerary.place.PlaceTypeSummary
+import com.tribe.application.itinerary.place.RegularOpeningPeriodInput
 import com.tribe.application.itinerary.place.RouteDetails
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.http.HttpHeaders
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
 
@@ -16,23 +25,38 @@ import org.springframework.web.reactive.function.client.WebClient
 @ConditionalOnProperty(name = ["tribe.itinerary.place-search.enabled"], havingValue = "true", matchIfMissing = true)
 class GooglePlaceSearchGateway(
     private val webClientBuilder: WebClient.Builder,
+    private val objectMapper: ObjectMapper,
     @Value("\${google.maps.key}") private val apiKey: String,
 ) : PlaceSearchGateway {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val webClient = webClientBuilder.build()
 
-    override fun search(query: String?, language: String, region: String?): List<PlaceSearchResult> {
+    override fun search(query: String?, language: String, context: PlaceSearchContext): List<PlaceSearchResult> {
+        val body = mutableMapOf<String, Any?>(
+            "textQuery" to query,
+            "languageCode" to language,
+            "regionCode" to context.regionCode,
+        )
+        if (context.latitude != null && context.longitude != null) {
+            body["locationBias"] = mapOf(
+                "circle" to mapOf(
+                    "center" to mapOf(
+                        "latitude" to context.latitude,
+                        "longitude" to context.longitude,
+                    ),
+                    "radius" to (context.radiusMeters ?: 500000),
+                ),
+            )
+        }
+
         val response = webClient.post()
             .uri("https://places.googleapis.com/v1/places:searchText")
             .header("X-Goog-Api-Key", apiKey)
-            .header("X-Goog-FieldMask", "places.id,places.displayName,places.formattedAddress,places.location")
-            .bodyValue(
-                mapOf(
-                    "textQuery" to query,
-                    "languageCode" to language,
-                    "regionCode" to region,
-                )
+            .header(
+                "X-Goog-FieldMask",
+                "places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types,places.photos.name",
             )
+            .bodyValue(body)
             .retrieve()
             .bodyToMono(PlacesResponse::class.java)
             .doOnError { logger.error("Error calling Google Places API", it) }
@@ -46,8 +70,77 @@ class GooglePlaceSearchGateway(
                 address = it.formattedAddress ?: "주소 정보 없음",
                 latitude = it.location?.latitude ?: 0.0,
                 longitude = it.location?.longitude ?: 0.0,
+                placeTypeSummary = PlaceTypeSummary(
+                    primaryType = it.primaryType,
+                    types = it.types ?: emptyList(),
+                    localizedPrimaryLabel = it.primaryType?.replace('_', ' '),
+                ),
+                photoHint = it.photos?.firstOrNull()?.name?.let { name ->
+                    PlacePhotoHint(name = name, photoUri = "/api/v1/places/photos?name=$name")
+                },
             )
         } ?: emptyList()
+    }
+
+    override fun getPlaceDetails(externalPlaceId: String, language: String): PlaceDetailsResult? {
+        val response = webClient.get()
+            .uri("https://places.googleapis.com/v1/places/{placeId}", externalPlaceId)
+            .header("X-Goog-Api-Key", apiKey)
+            .header(
+                "X-Goog-FieldMask",
+                "id,displayName,formattedAddress,location,primaryType,types,businessStatus,utcOffsetMinutes,nationalPhoneNumber,internationalPhoneNumber,websiteUri,googleMapsUri,rating,userRatingCount,priceLevel,regularOpeningHours,currentOpeningHours,photos.name,editorialSummary",
+            )
+            .retrieve()
+            .bodyToMono(PlaceDetailsResponse::class.java)
+            .doOnError { logger.error("Error calling Google Place Details API", it) }
+            .block()
+            ?: return null
+
+        val regularOpeningHoursJson = response.regularOpeningHours?.let { objectMapper.writeValueAsString(it) }
+        val currentOpeningHoursJson = response.currentOpeningHours?.let { objectMapper.writeValueAsString(it) }
+
+        return PlaceDetailsResult(
+            externalPlaceId = response.id,
+            placeName = response.displayName?.text ?: "이름 없음",
+            address = response.formattedAddress ?: "주소 정보 없음",
+            latitude = response.location?.latitude ?: 0.0,
+            longitude = response.location?.longitude ?: 0.0,
+            placeTypeSummary = PlaceTypeSummary(
+                primaryType = response.primaryType,
+                types = response.types ?: emptyList(),
+                localizedPrimaryLabel = response.primaryType?.replace('_', ' '),
+            ),
+            businessStatus = response.businessStatus,
+            utcOffsetMinutes = response.utcOffsetMinutes,
+            formattedPhoneNumber = response.nationalPhoneNumber,
+            internationalPhoneNumber = response.internationalPhoneNumber,
+            websiteUri = response.websiteUri,
+            googleMapsUri = response.googleMapsUri,
+            rating = response.rating,
+            userRatingCount = response.userRatingCount,
+            priceLevel = response.priceLevel,
+            regularOpeningHoursJson = regularOpeningHoursJson,
+            currentOpeningHoursJson = currentOpeningHoursJson,
+            primaryPhotoName = response.photos?.firstOrNull()?.name,
+            editorialSummary = response.editorialSummary?.text,
+            regularOpeningPeriods = parseRegularOpeningPeriods(response.regularOpeningHours),
+        )
+    }
+
+    override fun getPhoto(photoName: String, maxWidthPx: Int): PlacePhotoMedia? {
+        return webClient.get()
+            .uri("https://places.googleapis.com/v1/{photoName}/media?maxWidthPx={maxWidthPx}&skipHttpRedirect=true", photoName, maxWidthPx)
+            .header("X-Goog-Api-Key", apiKey)
+            .exchangeToMono { response ->
+                response.bodyToMono(ByteArray::class.java).map { bytes ->
+                    PlacePhotoMedia(
+                        bytes = bytes,
+                        contentType = response.headers().asHttpHeaders().getFirst(HttpHeaders.CONTENT_TYPE),
+                    )
+                }
+            }
+            .doOnError { logger.error("Error calling Google Place Photo API", it) }
+            .block()
     }
 
     override fun directions(originPlaceId: String, destinationPlaceId: String, travelMode: String): RouteDetails? {
@@ -76,10 +169,22 @@ class GooglePlaceSearchGateway(
 
         val route = response.routes.firstOrNull() ?: return null
         val leg = route.legs.firstOrNull() ?: return null
-        val origin = search(route.originName ?: "", "ko", null).firstOrNull()
-            ?: PlaceSearchResult(originPlaceId, route.originName ?: "출발지", route.originAddress ?: "", 0.0, 0.0)
-        val destination = search(route.destinationName ?: "", "ko", null).firstOrNull()
-            ?: PlaceSearchResult(destinationPlaceId, route.destinationName ?: "도착지", route.destinationAddress ?: "", 0.0, 0.0)
+        val origin = search(route.originName ?: "", "ko", PlaceSearchContext(regionCode = null)).firstOrNull()
+            ?: PlaceSearchResult(
+                externalPlaceId = originPlaceId,
+                placeName = route.originName ?: "출발지",
+                address = route.originAddress ?: "",
+                latitude = 0.0,
+                longitude = 0.0,
+            )
+        val destination = search(route.destinationName ?: "", "ko", PlaceSearchContext(regionCode = null)).firstOrNull()
+            ?: PlaceSearchResult(
+                externalPlaceId = destinationPlaceId,
+                placeName = route.destinationName ?: "도착지",
+                address = route.destinationAddress ?: "",
+                latitude = 0.0,
+                longitude = 0.0,
+            )
 
         return RouteDetails(
             travelMode = travelMode,
@@ -118,6 +223,9 @@ class GooglePlaceSearchGateway(
             val formattedAddress: String?,
             val location: Location?,
             val displayName: DisplayName?,
+            val primaryType: String?,
+            val types: List<String>?,
+            val photos: List<Photo>?,
         )
 
         @JsonIgnoreProperties(ignoreUnknown = true)
@@ -131,7 +239,35 @@ class GooglePlaceSearchGateway(
             val text: String,
             val languageCode: String?,
         )
+
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        data class Photo(
+            val name: String?,
+        )
     }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    data class PlaceDetailsResponse(
+        val id: String,
+        val formattedAddress: String?,
+        val location: PlacesResponse.Location?,
+        val displayName: PlacesResponse.DisplayName?,
+        val primaryType: String?,
+        val types: List<String>?,
+        val businessStatus: String?,
+        val utcOffsetMinutes: Int?,
+        val nationalPhoneNumber: String?,
+        val internationalPhoneNumber: String?,
+        val websiteUri: String?,
+        val googleMapsUri: String?,
+        val rating: Double?,
+        val userRatingCount: Int?,
+        val priceLevel: Int?,
+        val regularOpeningHours: JsonNode?,
+        val currentOpeningHours: JsonNode?,
+        val photos: List<PlacesResponse.Photo>?,
+        val editorialSummary: PlacesResponse.DisplayName?
+    )
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     data class DirectionsRawResponse(
@@ -203,5 +339,31 @@ class GooglePlaceSearchGateway(
             val type: String? = null,
             val icon: String? = null,
         )
+    }
+
+    private fun parseRegularOpeningPeriods(regularOpeningHours: JsonNode?): List<RegularOpeningPeriodInput> {
+        val periods = regularOpeningHours?.get("periods") ?: return emptyList()
+        if (!periods.isArray) return emptyList()
+
+        return periods.mapIndexedNotNull { index, node ->
+            val open = node.get("open") ?: return@mapIndexedNotNull null
+            val close = node.get("close")
+            val openDay = open.get("day")?.asInt() ?: return@mapIndexedNotNull null
+            val openHour = open.get("hour")?.asInt() ?: 0
+            val openMinute = open.get("minute")?.asInt() ?: 0
+            val closeDay = close?.get("day")?.asInt() ?: openDay
+            val closeHour = close?.get("hour")?.asInt() ?: openHour
+            val closeMinute = close?.get("minute")?.asInt() ?: openMinute
+            val openTotal = openHour * 60 + openMinute
+            val closeTotal = closeHour * 60 + closeMinute
+
+            RegularOpeningPeriodInput(
+                dayOfWeek = openDay,
+                openMinute = openTotal,
+                closeMinute = closeTotal,
+                isOvernight = closeDay != openDay || closeTotal < openTotal,
+                sequenceNo = index + 1,
+            )
+        }
     }
 }

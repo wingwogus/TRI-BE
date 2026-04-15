@@ -4,6 +4,24 @@ import com.tribe.application.itinerary.wishlist.WishlistResult
 import java.math.BigDecimal
 
 object WishlistResponses {
+    data class PlaceTypeSummaryResponse(
+        val primaryType: String?,
+        val types: List<String>,
+        val localizedPrimaryLabel: String?,
+    )
+
+    data class PhotoHintResponse(
+        val name: String?,
+        val photoUri: String?,
+    )
+
+    data class PlaceDetailSummaryResponse(
+        val businessStatus: String?,
+        val rating: Double?,
+        val userRatingCount: Int?,
+        val editorialSummary: String?,
+    )
+
     data class AdderResponse(
         val tripMemberId: Long,
         val memberId: Long?,
@@ -21,6 +39,9 @@ object WishlistResponses {
         val address: String?,
         val latitude: BigDecimal,
         val longitude: BigDecimal,
+        val placeTypeSummary: PlaceTypeSummaryResponse?,
+        val photoHint: PhotoHintResponse?,
+        val placeDetailSummary: PlaceDetailSummaryResponse?,
         val adder: AdderResponse,
     ) {
         companion object {
@@ -31,6 +52,13 @@ object WishlistResponses {
                 item.address,
                 item.latitude,
                 item.longitude,
+                item.placeTypeSummary?.let {
+                    PlaceTypeSummaryResponse(it.primaryType, it.types, it.localizedPrimaryLabel)
+                },
+                item.photoHint?.let { PhotoHintResponse(it.name, it.photoUri) },
+                item.placeDetailSummary?.let {
+                    PlaceDetailSummaryResponse(it.businessStatus, it.rating, it.userRatingCount, it.editorialSummary)
+                },
                 AdderResponse.from(item.adder),
             )
         }

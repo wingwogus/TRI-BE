@@ -2,6 +2,8 @@ package com.tribe.application.itinerary.item
 
 import com.tribe.application.exception.ErrorCode
 import com.tribe.application.exception.business.BusinessException
+import com.tribe.application.itinerary.place.OpeningHoursEvaluator
+import com.tribe.application.itinerary.place.PlaceViewAssembler
 import com.tribe.application.itinerary.place.PlaceSearchResult
 import com.tribe.application.itinerary.place.PlaceSearchService
 import com.tribe.application.itinerary.place.RouteDetails
@@ -39,6 +41,8 @@ class ItemServiceTest {
     @Mock private lateinit var placeRepository: PlaceRepository
     @Mock private lateinit var placeSearchService: PlaceSearchService
     @Mock private lateinit var tripRepository: TripRepository
+    @Mock private lateinit var placeViewAssembler: PlaceViewAssembler
+    @Mock private lateinit var openingHoursEvaluator: OpeningHoursEvaluator
     @Mock private lateinit var tripMemberRepository: TripMemberRepository
     @Mock private lateinit var currentActor: CurrentActor
     @Mock private lateinit var tripRealtimeEventPublisher: TripRealtimeEventPublisher
@@ -51,6 +55,8 @@ class ItemServiceTest {
             itineraryItemRepository = itineraryItemRepository,
             placeRepository = placeRepository,
             placeSearchService = placeSearchService,
+            placeViewAssembler = placeViewAssembler,
+            openingHoursEvaluator = openingHoursEvaluator,
             currentActor = currentActor,
             tripRealtimeEventPublisher = tripRealtimeEventPublisher,
             tripAuthorizationPolicy = com.tribe.application.trip.core.TripAuthorizationPolicy(tripMemberRepository, currentActor),
@@ -176,8 +182,20 @@ class ItemServiceTest {
         `when`(placeSearchService.directions("origin", "dest", "walking")).thenReturn(
             RouteDetails(
                 travelMode = "WALKING",
-                originPlace = PlaceSearchResult("origin", "Origin", "addr1", 0.0, 0.0),
-                destinationPlace = PlaceSearchResult("dest", "Destination", "addr2", 1.0, 1.0),
+                originPlace = PlaceSearchResult(
+                    externalPlaceId = "origin",
+                    placeName = "Origin",
+                    address = "addr1",
+                    latitude = 0.0,
+                    longitude = 0.0,
+                ),
+                destinationPlace = PlaceSearchResult(
+                    externalPlaceId = "dest",
+                    placeName = "Destination",
+                    address = "addr2",
+                    latitude = 1.0,
+                    longitude = 1.0,
+                ),
                 totalDuration = "10 mins",
                 totalDistance = "1 km",
                 steps = emptyList(),

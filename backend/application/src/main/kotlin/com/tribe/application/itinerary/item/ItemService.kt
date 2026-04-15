@@ -2,6 +2,8 @@ package com.tribe.application.itinerary.item
 
 import com.tribe.application.exception.ErrorCode
 import com.tribe.application.exception.business.BusinessException
+import com.tribe.application.itinerary.place.OpeningHoursEvaluator
+import com.tribe.application.itinerary.place.PlaceViewAssembler
 import com.tribe.application.itinerary.place.PlaceSearchService
 import com.tribe.application.itinerary.place.RouteDetails
 import com.tribe.application.security.CurrentActor
@@ -24,6 +26,8 @@ class ItemService(
     private val itineraryItemRepository: ItineraryItemRepository,
     private val placeRepository: PlaceRepository,
     private val placeSearchService: PlaceSearchService,
+    private val placeViewAssembler: PlaceViewAssembler,
+    private val openingHoursEvaluator: OpeningHoursEvaluator,
     private val currentActor: CurrentActor,
     private val tripRealtimeEventPublisher: TripRealtimeEventPublisher,
     private val tripAuthorizationPolicy: TripAuthorizationPolicy,
@@ -52,7 +56,7 @@ class ItemService(
                 memo = normalizeNullableText(command.memo),
             ),
         )
-        val result = ItemResult.ItemView.from(item)
+        val result = toItemView(item)
         tripRealtimeEventPublisher.publish(
             TripRealtimeEvent(
                 type = TripRealtimeEventType.ITINERARY,
@@ -67,7 +71,7 @@ class ItemService(
     @Transactional(readOnly = true)
     fun getItem(tripId: Long, itemId: Long): ItemResult.ItemView {
         tripAuthorizationPolicy.isTripMember(tripId)
-        return ItemResult.ItemView.from(findItem(tripId, itemId))
+        return toItemView(findItem(tripId, itemId))
     }
 
     @Transactional(readOnly = true)
@@ -75,9 +79,9 @@ class ItemService(
         tripAuthorizationPolicy.isTripMember(tripId)
         return if (visitDay != null) {
             itineraryItemRepository.findByTripIdAndVisitDayOrderByOrderAsc(tripId, visitDay)
-                .map(ItemResult.ItemView::from)
+                .map(::toItemView)
         } else {
-            itineraryItemRepository.findByTripIdOrderByVisitDayAndOrder(tripId).map(ItemResult.ItemView::from)
+            itineraryItemRepository.findByTripIdOrderByVisitDayAndOrder(tripId).map(::toItemView)
         }
     }
 
@@ -96,7 +100,7 @@ class ItemService(
         command.time?.let { item.time = it }
         command.memo?.let { item.memo = normalizeNullableText(it) }
 
-        val result = ItemResult.ItemView.from(item)
+        val result = toItemView(item)
         tripRealtimeEventPublisher.publish(
             TripRealtimeEvent(
                 type = TripRealtimeEventType.ITINERARY,
@@ -125,7 +129,7 @@ class ItemService(
             item.order = orderItem.itemOrder
         }
 
-        val result = items.sortedWith(compareBy(ItineraryItem::visitDay, ItineraryItem::order)).map(ItemResult.ItemView::from)
+        val result = items.sortedWith(compareBy(ItineraryItem::visitDay, ItineraryItem::order)).map(::toItemView)
         tripRealtimeEventPublisher.publish(
             TripRealtimeEvent(
                 type = TripRealtimeEventType.ITINERARY,
@@ -180,6 +184,22 @@ class ItemService(
             throw BusinessException(ErrorCode.NO_BELONG_TRIP)
         }
         return item
+    }
+
+    private fun toItemView(item: ItineraryItem): ItemResult.ItemView {
+        val placeTypeSummary = placeViewAssembler.toPlaceTypeSummary(item.place)?.let {
+            ItemResult.PlaceTypeSummary(it.primaryType, it.types, it.localizedPrimaryLabel)
+        }
+        val photoHint = placeViewAssembler.toPhotoHint(item.place)?.let { ItemResult.PhotoHint(it.name, it.photoUri) }
+        val placeDetailSummary = placeViewAssembler.toDetailSummary(item.place)?.let {
+            ItemResult.PlaceDetailSummary(it.businessStatus, it.rating, it.userRatingCount, it.editorialSummary)
+        }
+        val openingStatus = if (item.place != null) {
+            openingHoursEvaluator.evaluate(item, item.trip.startDate)
+        } else {
+            null
+        }
+        return ItemResult.ItemView.from(item, placeTypeSummary, photoHint, placeDetailSummary, openingStatus)
     }
 
     private fun normalizeNullableText(value: String?): String? =

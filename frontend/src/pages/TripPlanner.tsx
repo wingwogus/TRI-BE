@@ -96,6 +96,7 @@ import {getCountryTimezone} from "@/lib/utils";
 import {RouteInfoCard} from "@/components/RouteInfoCard";
 import {getDefaultCurrencyByCountry} from "@/lib/currency";
 import {addDays, format} from "date-fns";
+import {getOpeningStatusLabel, getOpeningStatusTone, getPlaceTypeLabel} from "@/lib/placePresentation";
 
 type DaySection = {
   visitDay: number;
@@ -364,8 +365,33 @@ const SortableDaySection = ({
                       {item.time && (
                           <p className="text-xs text-muted-foreground mt-1">{item.time.split('T')[1]?.slice(0, 5)}</p>
                       )}
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {getPlaceTypeLabel(item.placeTypeSummary) && (
+                          <Badge variant="secondary" className="text-[10px] font-medium">
+                            {getPlaceTypeLabel(item.placeTypeSummary)}
+                          </Badge>
+                        )}
+                        {getOpeningStatusLabel(item.openingStatusWarning) && (
+                          <Badge
+                            variant={getOpeningStatusTone(item.openingStatusWarning)}
+                            className="text-[10px] font-medium"
+                          >
+                            {getOpeningStatusLabel(item.openingStatusWarning)}
+                          </Badge>
+                        )}
+                        {typeof item.placeDetailSummary?.rating === "number" && (
+                          <Badge variant="outline" className="text-[10px] font-medium">
+                            평점 {item.placeDetailSummary.rating.toFixed(1)}
+                          </Badge>
+                        )}
+                      </div>
                       {item.memo && (
                         <p className="text-xs text-muted-foreground mt-1">{item.memo}</p>
+                      )}
+                      {item.placeDetailSummary?.editorialSummary && (
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                          {item.placeDetailSummary.editorialSummary}
+                        </p>
                       )}
                       </div>
                      <div className="flex space-x-1 justify-end">
@@ -2108,8 +2134,18 @@ const TripPlanner = () => {
                         <h5 className="font-medium text-foreground text-xs truncate">
                           {item.name}
                         </h5>
+                        {getPlaceTypeLabel(item.placeTypeSummary) && (
+                          <div className="mt-1">
+                            <Badge variant="secondary" className="text-[10px] font-medium">
+                              {getPlaceTypeLabel(item.placeTypeSummary)}
+                            </Badge>
+                          </div>
+                        )}
                         <div className="text-xs text-muted-foreground">
                           <p className="truncate">{item.address || "주소 정보 없음"}</p>
+                          {typeof item.placeDetailSummary?.rating === "number" && (
+                            <p className="truncate mt-1">평점 {item.placeDetailSummary.rating.toFixed(1)}</p>
+                          )}
                         </div>
                       </div>
                       <div className="flex gap-1 flex-shrink-0 justify-end">
@@ -2266,8 +2302,18 @@ const TripPlanner = () => {
                         <h5 className="font-medium text-foreground text-sm mb-1 truncate">
                           {item.name}
                         </h5>
+                        {getPlaceTypeLabel(item.placeTypeSummary) && (
+                          <div className="mb-1">
+                            <Badge variant="secondary" className="text-[10px] font-medium">
+                              {getPlaceTypeLabel(item.placeTypeSummary)}
+                            </Badge>
+                          </div>
+                        )}
                         <div className="text-xs text-muted-foreground">
                           <p className="truncate">{item.address || "주소 정보 없음"}</p>
+                          {typeof item.placeDetailSummary?.rating === "number" && (
+                            <p className="truncate mt-1">평점 {item.placeDetailSummary.rating.toFixed(1)}</p>
+                          )}
                         </div>
                       </div>
                       <div className="flex gap-1 flex-shrink-0 justify-end">

@@ -2,8 +2,11 @@ package com.tribe.api.itinerary.place
 
 import com.tribe.api.common.ApiResponse
 import com.tribe.application.itinerary.place.PlaceSearchService
+import org.springframework.core.io.ByteArrayResource
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -18,17 +21,89 @@ class PlaceController(
         @RequestParam query: String?,
         @RequestParam region: String?,
         @RequestParam(defaultValue = "ko") language: String,
+        @RequestParam(required = false) latitude: Double?,
+        @RequestParam(required = false) longitude: Double?,
+        @RequestParam(required = false) radiusMeters: Int?,
+        @RequestParam(required = false) regionContextKey: String?,
     ): ResponseEntity<ApiResponse<List<PlaceRequests.SearchResponse>>> {
-        val result = placeSearchService.search(query, language, region)
+        val result = placeSearchService.search(query, language, region, latitude, longitude, radiusMeters, regionContextKey)
             .map {
                 PlaceRequests.SearchResponse(
+                    placeId = it.placeId,
                     externalPlaceId = it.externalPlaceId,
                     placeName = it.placeName,
                     address = it.address,
                     latitude = it.latitude,
                     longitude = it.longitude,
+                    placeTypeSummary = it.placeTypeSummary?.let { summary ->
+                        PlaceRequests.PlaceTypeSummaryResponse(
+                            primaryType = summary.primaryType,
+                            types = summary.types,
+                            localizedPrimaryLabel = summary.localizedPrimaryLabel,
+                        )
+                    },
+                    photoHint = it.photoHint?.let { hint ->
+                        PlaceRequests.PhotoHintResponse(name = hint.name, photoUri = hint.photoUri)
+                    },
+                    placeDetailSummary = it.placeDetailSummary?.let { summary ->
+                        PlaceRequests.PlaceDetailSummaryResponse(
+                            businessStatus = summary.businessStatus,
+                            rating = summary.rating,
+                            userRatingCount = summary.userRatingCount,
+                            editorialSummary = summary.editorialSummary,
+                        )
+                    },
                 )
             }
         return ResponseEntity.ok(ApiResponse.ok(result))
+    }
+
+    @GetMapping("/{placeId}")
+    fun getPlaceDetail(
+        @PathVariable placeId: Long,
+        @RequestParam(defaultValue = "ko") language: String,
+    ): ResponseEntity<ApiResponse<PlaceRequests.DetailResponse>> {
+        val detail = placeSearchService.getPlaceDetail(placeId, language)
+        return ResponseEntity.ok(
+            ApiResponse.ok(
+                PlaceRequests.DetailResponse(
+                    placeId = detail.placeId,
+                    externalPlaceId = detail.externalPlaceId,
+                    placeName = detail.placeName,
+                    address = detail.address,
+                    latitude = detail.latitude,
+                    longitude = detail.longitude,
+                    placeTypeSummary = detail.placeTypeSummary?.let {
+                        PlaceRequests.PlaceTypeSummaryResponse(it.primaryType, it.types, it.localizedPrimaryLabel)
+                    },
+                    photoHint = detail.photoHint?.let { hint -> PlaceRequests.PhotoHintResponse(hint.name, hint.photoUri) },
+                    placeDetailSummary = detail.placeDetailSummary?.let {
+                        PlaceRequests.PlaceDetailSummaryResponse(
+                            businessStatus = it.businessStatus,
+                            rating = it.rating,
+                            userRatingCount = it.userRatingCount,
+                            editorialSummary = it.editorialSummary,
+                        )
+                    },
+                    formattedPhoneNumber = detail.formattedPhoneNumber,
+                    internationalPhoneNumber = detail.internationalPhoneNumber,
+                    websiteUri = detail.websiteUri,
+                    googleMapsUri = detail.googleMapsUri,
+                    regularOpeningHoursJson = detail.regularOpeningHoursJson,
+                    currentOpeningHoursJson = detail.currentOpeningHoursJson,
+                ),
+            ),
+        )
+    }
+
+    @GetMapping("/photos")
+    fun getPlacePhoto(
+        @RequestParam name: String,
+        @RequestParam(defaultValue = "320") maxWidthPx: Int,
+    ): ResponseEntity<ByteArrayResource> {
+        val media = placeSearchService.getPhoto(name, maxWidthPx)
+        return ResponseEntity.ok()
+            .contentType(media.contentType?.let(MediaType::parseMediaType) ?: MediaType.IMAGE_JPEG)
+            .body(ByteArrayResource(media.bytes))
     }
 }

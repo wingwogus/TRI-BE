@@ -10,6 +10,18 @@ object ItemResult {
         val localizedPrimaryLabel: String?,
     )
 
+    data class PhotoHint(
+        val name: String?,
+        val photoUri: String? = null,
+    )
+
+    data class PlaceDetailSummary(
+        val businessStatus: String?,
+        val rating: Double?,
+        val userRatingCount: Int?,
+        val editorialSummary: String?,
+    )
+
     data class LocationInfo(
         val lat: Double,
         val lng: Double,
@@ -29,10 +41,18 @@ object ItemResult {
         val memo: String?,
         val location: LocationInfo?,
         val placeTypeSummary: PlaceTypeSummary?,
+        val photoHint: PhotoHint?,
+        val placeDetailSummary: PlaceDetailSummary?,
         val openingStatusWarning: String?,
     ) {
         companion object {
-            fun from(item: ItineraryItem) = ItemView(
+            fun from(
+                item: ItineraryItem,
+                placeTypeSummary: PlaceTypeSummary? = null,
+                photoHint: PhotoHint? = null,
+                placeDetailSummary: PlaceDetailSummary? = null,
+                openingStatusWarning: String? = null,
+            ) = ItemView(
                 itemId = item.id,
                 tripId = item.trip.id,
                 visitDay = item.visitDay,
@@ -50,8 +70,10 @@ object ItemResult {
                         address = it.address,
                     )
                 },
-                placeTypeSummary = null,
-                openingStatusWarning = null,
+                placeTypeSummary = placeTypeSummary,
+                photoHint = photoHint,
+                placeDetailSummary = placeDetailSummary,
+                openingStatusWarning = openingStatusWarning,
             )
         }
     }

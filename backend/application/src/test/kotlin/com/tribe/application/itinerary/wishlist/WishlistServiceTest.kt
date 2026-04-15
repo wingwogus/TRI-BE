@@ -2,10 +2,10 @@ package com.tribe.application.itinerary.wishlist
 
 import com.tribe.application.exception.ErrorCode
 import com.tribe.application.exception.business.BusinessException
+import com.tribe.application.itinerary.place.PlaceCatalogService
 import com.tribe.application.security.CurrentActor
 import com.tribe.application.trip.event.TripRealtimeEventPublisher
 import com.tribe.domain.itinerary.place.Place
-import com.tribe.domain.itinerary.place.PlaceRepository
 import com.tribe.domain.itinerary.wishlist.WishlistItem
 import com.tribe.domain.itinerary.wishlist.WishlistItemRepository
 import com.tribe.domain.member.Member
@@ -35,7 +35,7 @@ import java.util.Optional
 @ExtendWith(MockitoExtension::class)
 class WishlistServiceTest {
     @Mock private lateinit var wishlistItemRepository: WishlistItemRepository
-    @Mock private lateinit var placeRepository: PlaceRepository
+    @Mock private lateinit var placeCatalogService: PlaceCatalogService
     @Mock private lateinit var tripMemberRepository: TripMemberRepository
     @Mock private lateinit var tripRepository: TripRepository
     @Mock private lateinit var memberRepository: MemberRepository
@@ -49,7 +49,7 @@ class WishlistServiceTest {
     fun setUp() {
         service = WishlistService(
             wishlistItemRepository = wishlistItemRepository,
-            placeRepository = placeRepository,
+            placeCatalogService = placeCatalogService,
             tripMemberRepository = tripMemberRepository,
             tripRepository = tripRepository,
             memberRepository = memberRepository,
@@ -68,12 +68,18 @@ class WishlistServiceTest {
         `when`(tripRepository.findById(fixture.trip.id)).thenReturn(Optional.of(fixture.trip))
         `when`(tripMemberRepository.findByTripAndMember(fixture.trip, fixture.member)).thenReturn(fixture.tripMember)
         `when`(wishlistItemRepository.existsByTrip_IdAndPlace_ExternalPlaceId(fixture.trip.id, "new_place")).thenReturn(false)
-        `when`(placeRepository.findByExternalPlaceId("new_place")).thenReturn(null)
-        `when`(placeRepository.save(any(Place::class.java))).thenAnswer { invocation ->
-            val saved = invocation.arguments[0] as Place
-            ReflectionTestUtils.setField(saved, "id", 50L)
-            saved
-        }
+        val place = Place("new_place", "도쿄타워", "도쿄", BigDecimal.ZERO, BigDecimal.ZERO)
+        ReflectionTestUtils.setField(place, "id", 50L)
+        `when`(
+            placeCatalogService.getOrCreateAndEnrich(
+                "new_place",
+                "도쿄타워",
+                "도쿄",
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                "ko",
+            ),
+        ).thenReturn(place)
         `when`(wishlistItemRepository.save(any(WishlistItem::class.java))).thenAnswer { invocation ->
             val saved = invocation.arguments[0] as WishlistItem
             ReflectionTestUtils.setField(saved, "id", 60L)

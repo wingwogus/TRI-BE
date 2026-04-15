@@ -20,6 +20,22 @@ object ItemResponses {
         }
     }
 
+    data class PhotoHintResponse(
+        val name: String?,
+        val photoUri: String?,
+    ) {
+        companion object {
+            fun from(hint: ItemResult.PhotoHint) = PhotoHintResponse(name = hint.name, photoUri = hint.photoUri)
+        }
+    }
+
+    data class PlaceDetailSummaryResponse(
+        val businessStatus: String?,
+        val rating: Double?,
+        val userRatingCount: Int?,
+        val editorialSummary: String?,
+    )
+
     data class LocationResponse(
         val lat: Double,
         val lng: Double,
@@ -47,6 +63,8 @@ object ItemResponses {
         val memo: String?,
         val location: LocationResponse?,
         val placeTypeSummary: PlaceTypeSummaryResponse?,
+        val photoHint: PhotoHintResponse?,
+        val placeDetailSummary: PlaceDetailSummaryResponse?,
         val openingStatusWarning: String?,
     ) {
         companion object {
@@ -63,6 +81,10 @@ object ItemResponses {
                 memo = view.memo,
                 location = view.location?.let(LocationResponse::from),
                 placeTypeSummary = view.placeTypeSummary?.let(PlaceTypeSummaryResponse::from),
+                photoHint = view.photoHint?.let(PhotoHintResponse::from),
+                placeDetailSummary = view.placeDetailSummary?.let {
+                    PlaceDetailSummaryResponse(it.businessStatus, it.rating, it.userRatingCount, it.editorialSummary)
+                },
                 openingStatusWarning = view.openingStatusWarning,
             )
         }

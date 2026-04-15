@@ -1,9 +1,30 @@
 package com.tribe.application.itinerary.wishlist
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.tribe.domain.itinerary.wishlist.WishlistItem
 import java.math.BigDecimal
 
 object WishlistResult {
+    private val objectMapper = jacksonObjectMapper()
+
+    data class PlaceTypeSummary(
+        val primaryType: String?,
+        val types: List<String>,
+        val localizedPrimaryLabel: String?,
+    )
+
+    data class PhotoHint(
+        val name: String?,
+        val photoUri: String?,
+    )
+
+    data class PlaceDetailSummary(
+        val businessStatus: String?,
+        val rating: Double?,
+        val userRatingCount: Int?,
+        val editorialSummary: String?,
+    )
+
     data class Adder(
         val tripMemberId: Long,
         val memberId: Long?,
@@ -17,6 +38,9 @@ object WishlistResult {
         val address: String?,
         val latitude: BigDecimal,
         val longitude: BigDecimal,
+        val placeTypeSummary: PlaceTypeSummary?,
+        val photoHint: PhotoHint?,
+        val placeDetailSummary: PlaceDetailSummary?,
         val adder: Adder,
     ) {
         companion object {
@@ -28,6 +52,26 @@ object WishlistResult {
                     address = entity.place.address,
                     latitude = entity.place.latitude,
                     longitude = entity.place.longitude,
+                    placeTypeSummary = entity.place.googlePrimaryType?.let {
+                        PlaceTypeSummary(
+                            primaryType = entity.place.googlePrimaryType,
+                            types = entity.place.googleTypesJson?.let { json ->
+                                runCatching { objectMapper.readValue(json, Array<String>::class.java).toList() }.getOrDefault(emptyList())
+                            } ?: emptyList(),
+                            localizedPrimaryLabel = entity.place.googlePrimaryType?.replace('_', ' '),
+                        )
+                    },
+                    photoHint = entity.place.detailSnapshot?.primaryPhotoName?.let {
+                        PhotoHint(name = it, photoUri = "/api/v1/places/photos?name=$it")
+                    },
+                    placeDetailSummary = entity.place.detailSnapshot?.let {
+                        PlaceDetailSummary(
+                            businessStatus = entity.place.businessStatus,
+                            rating = it.rating,
+                            userRatingCount = it.userRatingCount,
+                            editorialSummary = it.editorialSummary,
+                        )
+                    },
                     adder = Adder(
                         tripMemberId = entity.adder.id,
                         memberId = entity.adder.member?.id,

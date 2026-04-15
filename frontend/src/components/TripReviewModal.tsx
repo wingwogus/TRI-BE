@@ -16,6 +16,7 @@ import { fetchAllItinerariesForTrip, itineraryApi } from "@/api/itinerary";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlaceSearchResult } from "@/api/places";
 import { tripQueryKeys } from "@/lib/tripQueryKeys";
+import { getPlacePhotoUrl, getPlaceTypeLabel } from "@/lib/placePresentation";
 
 interface TripReviewModalProps {
   open: boolean;
@@ -259,12 +260,34 @@ export const TripReviewModal = ({ open, onOpenChange, tripId, tripStartDate, tri
               <Card key={`${place.externalPlaceId}-${index}`} className="overflow-hidden border-2 hover:border-primary/30 transition-all">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-foreground mb-1 flex items-center gap-2">
-                        <Star className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                        {place.placeName}
-                      </h4>
-                      <p className="text-sm text-muted-foreground truncate">{place.address}</p>
+                    <div className="flex flex-1 min-w-0 gap-3">
+                      {getPlacePhotoUrl(place.photoHint) && (
+                        <img
+                          src={getPlacePhotoUrl(place.photoHint) || undefined}
+                          alt={place.placeName}
+                          className="h-16 w-16 rounded-lg object-cover border shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-foreground mb-1 flex items-center gap-2">
+                          <Star className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                          <span className="truncate">{place.placeName}</span>
+                        </h4>
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {getPlaceTypeLabel(place.placeTypeSummary) && (
+                            <Badge variant="secondary">{getPlaceTypeLabel(place.placeTypeSummary)}</Badge>
+                          )}
+                          {typeof place.placeDetailSummary?.rating === "number" && (
+                            <Badge variant="outline">평점 {place.placeDetailSummary.rating.toFixed(1)}</Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate">{place.address}</p>
+                        {place.placeDetailSummary?.editorialSummary && (
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                            {place.placeDetailSummary.editorialSummary}
+                          </p>
+                        )}
+                      </div>
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
                       <Button
