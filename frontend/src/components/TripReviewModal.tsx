@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PlaceSearchResult } from "@/api/places";
 import { tripQueryKeys } from "@/lib/tripQueryKeys";
 import { getPlacePhotoUrl, getPlaceTypeLabel } from "@/lib/placePresentation";
+import { readApiErrorMessage } from "@/api/http";
 
 interface TripReviewModalProps {
   open: boolean;
@@ -118,10 +119,10 @@ export const TripReviewModal = ({ open, onOpenChange, tripId, tripStartDate, tri
         description: "장소가 위시리스트에 추가되었습니다.",
       });
     },
-    onError: () => {
+    onError: (error) => {
       toast({
         title: "추가 실패",
-        description: "위시리스트 추가 중 오류가 발생했습니다.",
+        description: readApiErrorMessage(error, "위시리스트 추가 중 오류가 발생했습니다."),
         variant: "destructive",
       });
     },

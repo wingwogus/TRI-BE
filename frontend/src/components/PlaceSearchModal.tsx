@@ -6,21 +6,26 @@ import {Button} from "@/components/ui/button";
 import {placesApi, PlaceSearchResult} from "@/api/places";
 import {Badge} from "@/components/ui/badge";
 import {useToast} from "@/hooks/use-toast";
-import {getCountryCoordinates} from "@/lib/countryCoordinates";
+import {buildPlaceSearchQuery, getCountryOptionByCode2, getTripRegionByCode, getTripRegionLabel} from "@/lib/tripRegions";
 import {getPlacePhotoUrl, getPlaceTypeLabel} from "@/lib/placePresentation";
+import {readApiErrorMessage} from "@/api/http";
 
 interface PlaceSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddPlace: (place: PlaceSearchResult) => void;
-  region?: string;
+  countryCode?: string;
+  regionCode?: string | null;
 }
 
-export const PlaceSearchModal = ({ isOpen, onClose, onAddPlace, region }: PlaceSearchModalProps) => {
+export const PlaceSearchModal = ({ isOpen, onClose, onAddPlace, countryCode, regionCode }: PlaceSearchModalProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [places, setPlaces] = useState<PlaceSearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const region = getTripRegionByCode(regionCode);
+  const regionLabel = getTripRegionLabel(regionCode);
+  const resolvedCountryCode = getCountryOptionByCode2(countryCode)?.code2;
 
   useEffect(() => {
     if (searchQuery.trim()) {
@@ -31,27 +36,29 @@ export const PlaceSearchModal = ({ isOpen, onClose, onAddPlace, region }: PlaceS
     } else {
       setPlaces([]);
     }
-  }, [searchQuery]);
+  }, [countryCode, regionCode, searchQuery]);
 
   const searchPlaces = async () => {
     if (!searchQuery.trim()) return;
     
     setIsLoading(true);
     try {
-      const [latitude, longitude] = region ? getCountryCoordinates(region) : [undefined, undefined];
+      const [latitude, longitude] = region
+        ? [region.centerLat, region.centerLng]
+        : [undefined, undefined];
       const results = await placesApi.searchPlaces(
-        searchQuery,
-        region,
+        buildPlaceSearchQuery(searchQuery, regionCode),
+        resolvedCountryCode,
         latitude,
         longitude,
-        500000,
-        region ? `country:${region}` : undefined,
+        50000,
+        region ? `region:${region.code}` : resolvedCountryCode ? `country:${resolvedCountryCode}` : undefined,
       );
       setPlaces(results);
     } catch (error) {
       toast({
         title: "검색 실패",
-        description: "장소 검색 중 오류가 발생했습니다.",
+        description: readApiErrorMessage(error, "장소 검색 중 오류가 발생했습니다."),
         variant: "destructive",
       });
     } finally {
@@ -81,7 +88,7 @@ export const PlaceSearchModal = ({ isOpen, onClose, onAddPlace, region }: PlaceS
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="장소명이나 카테고리를 검색하세요..."
+              placeholder={regionLabel ? `${regionLabel} 근처 장소를 검색하세요...` : "장소명이나 카테고리를 검색하세요..."}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"

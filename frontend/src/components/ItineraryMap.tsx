@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import {ItineraryResponse} from '@/api/itinerary';
 import {WishlistItem} from '@/api/wishlist';
 import {getCountryCoordinates} from '@/lib/countryCoordinates';
+import {getTripRegionCenter} from '@/lib/tripRegions';
 
 export interface ItineraryMapHandle {
     flyToMarker: (itineraryId: number) => void;
@@ -15,6 +16,7 @@ interface ItineraryMapProps {
     days?: number[];
     wishlistItems?: WishlistItem[];
     tripCountry?: string;
+    tripRegionCode?: string | null;
     onAddToItinerary?: (wishlistItem: WishlistItem, visitDay: number) => void;
     onDeleteItinerary?: (itineraryId: number, visitDay: number) => void;
     onDeleteWishlist?: (wishlistItemId: number) => void;
@@ -26,7 +28,7 @@ const getDayMarkerColor = (visitDay: number): string => {
 };
 
 export const ItineraryMap = forwardRef<ItineraryMapHandle, ItineraryMapProps>(
-    ({items = [], days = [], wishlistItems = [], tripCountry, onAddToItinerary, onDeleteItinerary, onDeleteWishlist}, ref) => {
+    ({items = [], days = [], wishlistItems = [], tripCountry, tripRegionCode, onAddToItinerary, onDeleteItinerary, onDeleteWishlist}, ref) => {
         const mapContainer = useRef<HTMLDivElement>(null);
         const map = useRef<L.Map | null>(null);
         const markersMap = useRef<Map<number, L.Marker>>(new Map());
@@ -68,9 +70,8 @@ export const ItineraryMap = forwardRef<ItineraryMapHandle, ItineraryMapProps>(
     useEffect(() => {
         if (mapContainer.current && !map.current) {
             // ISO 국가 코드 기반으로 초기 중심 설정
-            const defaultCenter = tripCountry 
-                ? getCountryCoordinates(tripCountry)
-                : [37.5665, 126.9780] as [number, number];
+            const defaultCenter = getTripRegionCenter(tripRegionCode)
+                ?? (tripCountry ? getCountryCoordinates(tripCountry) : [37.5665, 126.9780] as [number, number]);
 
             map.current = L.map(mapContainer.current, {
                 center: defaultCenter,
@@ -89,7 +90,7 @@ export const ItineraryMap = forwardRef<ItineraryMapHandle, ItineraryMapProps>(
                 map.current = null;
             }
         };
-    }, [tripCountry]);
+    }, [tripCountry, tripRegionCode]);
 
         // Effect for updating markers based on itineraries
         useEffect(() => {
@@ -114,7 +115,7 @@ export const ItineraryMap = forwardRef<ItineraryMapHandle, ItineraryMapProps>(
 
                     const markerColor = getDayMarkerColor(item.visitDay);
 
-                    // Create custom icon with number and category color
+                    // Create a numbered marker using the day's accent color.
                     const icon = L.divIcon({
                         className: 'custom-marker',
                         html: `

@@ -49,6 +49,7 @@ export interface TripDetail {
   startDate: string;
   endDate: string;
   country: string;
+  regionCode?: string | null;
   members: MemberInfo[];
 }
 
@@ -58,6 +59,7 @@ export interface SimpleTrip {
   startDate: string;
   endDate: string;
   country: string;
+  regionCode?: string | null;
   memberCount: number;
 }
 
@@ -95,6 +97,7 @@ export interface CreateTripRequest {
   startDate: string;
   endDate: string;
   country: Country;
+  regionCode?: string | null;
 }
 
 export interface UpdateTripRequest {
@@ -102,6 +105,7 @@ export interface UpdateTripRequest {
   startDate: string;
   endDate: string;
   country: Country;
+  regionCode?: string | null;
 }
 
 export interface InvitationResponse {
@@ -142,6 +146,7 @@ interface BackendSimpleTrip {
   startDate: string;
   endDate: string;
   country: string;
+  regionCode?: string | null;
   memberCount: number;
 }
 
@@ -163,6 +168,7 @@ const toTripDetail = (trip: BackendTripDetail): TripDetail => ({
   startDate: trip.startDate,
   endDate: trip.endDate,
   country: trip.country,
+  regionCode: trip.regionCode ?? null,
   members: trip.members.map(toMemberInfo),
 });
 
