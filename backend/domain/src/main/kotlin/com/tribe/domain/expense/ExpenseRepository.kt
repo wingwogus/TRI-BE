@@ -17,12 +17,6 @@ interface ExpenseRepository : JpaRepository<Expense, Long> {
         left join fetch payer.member
         left join fetch e.itineraryItem itineraryItem
         left join fetch e.expenseItems item
-        left join fetch item.assignments assignment
-        left join fetch assignment.tripMember assignedTripMember
-        left join fetch assignedTripMember.member
-        left join fetch e.participants participant
-        left join fetch participant.tripMember tripMember
-        left join fetch tripMember.member
         where e.id = :expenseId
         """
     )
@@ -38,9 +32,6 @@ interface ExpenseRepository : JpaRepository<Expense, Long> {
         left join fetch payer.member
         left join fetch e.itineraryItem itineraryItem
         left join fetch e.expenseItems item
-        left join fetch item.assignments assignment
-        left join fetch assignment.tripMember assignedTripMember
-        left join fetch assignedTripMember.member
         where e.trip.id = :tripId
         order by e.spentAt desc, e.id desc
         """
