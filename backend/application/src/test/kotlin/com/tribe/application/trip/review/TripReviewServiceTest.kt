@@ -62,7 +62,17 @@ class TripReviewServiceTest {
         doReturn("## 피드백\n---추천 장소 목록---\n오사카 성")
             .`when`(geminiGateway)
             .generate(org.mockito.ArgumentMatchers.anyString())
-        `when`(placeSearchService.search("오사카 성", "ko", trip.country.code)).thenReturn(
+        `when`(
+            placeSearchService.search(
+                "오사카 성",
+                "ko",
+                trip.country.code,
+                34.6937,
+                135.5023,
+                50_000,
+                "region:JP_OSAKA_KYOTO",
+            ),
+        ).thenReturn(
             listOf(
                 PlaceSearchResult(
                     externalPlaceId = "place1",
@@ -126,7 +136,7 @@ class TripReviewServiceTest {
     }
 
     private fun tripFixture(): Trip {
-        val trip = Trip("테스트 여행", LocalDate.now(), LocalDate.now().plusDays(5), Country.JAPAN)
+        val trip = Trip("테스트 여행", LocalDate.now(), LocalDate.now().plusDays(5), Country.JAPAN, "JP_OSAKA_KYOTO")
         ReflectionTestUtils.setField(trip, "id", 5L)
         val place = Place("seed", "도톤보리", "오사카", BigDecimal.ZERO, BigDecimal.ZERO)
         trip.itineraryItems.add(ItineraryItem(trip, 1, place, null, null, 1, null))

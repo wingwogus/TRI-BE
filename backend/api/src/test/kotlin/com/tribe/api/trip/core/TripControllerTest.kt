@@ -35,6 +35,40 @@ class TripControllerTest(
     private lateinit var tokenProvider: TokenProvider
 
     @Test
+    fun `createTrip accepts region code`() {
+        `when`(
+            tripService.createTrip(
+                TripCommand.Create(
+                    "Trip",
+                    LocalDate.of(2026, 4, 12),
+                    LocalDate.of(2026, 4, 13),
+                    "JP",
+                    "JP_TOKYO",
+                ),
+            ),
+        ).thenReturn(sampleTripDetail())
+
+        mockMvc.perform(
+            post("/api/v1/trips")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "title": "Trip",
+                      "startDate": "2026-04-12",
+                      "endDate": "2026-04-13",
+                      "country": "JP",
+                      "regionCode": "JP_TOKYO"
+                    }
+                    """.trimIndent()
+                )
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.regionCode", equalTo("JP_TOKYO")))
+    }
+
+    @Test
     fun `addGuest returns created trip detail`() {
         `when`(tripService.addGuest(TripCommand.AddGuest(5L, "guest"))).thenReturn(sampleTripDetail())
 
@@ -108,6 +142,7 @@ class TripControllerTest(
         startDate = LocalDate.of(2026, 4, 12),
         endDate = LocalDate.of(2026, 4, 13),
         country = "JP",
+        regionCode = "JP_TOKYO",
         members = listOf(
             TripResult.MemberSummary(
                 tripMemberId = 1L,

@@ -6,6 +6,7 @@ import com.tribe.domain.itinerary.place.PlaceRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Duration
+import java.util.Locale
 
 @Service
 @Transactional(readOnly = true)
@@ -16,6 +17,10 @@ class PlaceSearchService(
     private val placeRepository: PlaceRepository,
     private val placeViewAssembler: PlaceViewAssembler,
 ) {
+    companion object {
+        private const val MAX_RADIUS_METERS = 50_000
+    }
+
     fun search(
         query: String?,
         language: String,
@@ -26,20 +31,29 @@ class PlaceSearchService(
         regionContextKey: String? = null,
     ): List<PlaceSearchResult> {
         val normalizedQuery = query?.trim()?.takeIf { it.isNotBlank() } ?: return emptyList()
+        val normalizedRegion = region
+            ?.trim()
+            ?.uppercase(Locale.ROOT)
+            ?.takeIf { it.length == 2 && it.all(Char::isLetter) }
+        val normalizedRadius = if (latitude != null && longitude != null) {
+            (radiusMeters ?: MAX_RADIUS_METERS).coerceIn(1, MAX_RADIUS_METERS)
+        } else {
+            null
+        }
         val context = PlaceSearchContext(
-            regionCode = region,
+            regionCode = normalizedRegion,
             latitude = latitude,
             longitude = longitude,
-            radiusMeters = radiusMeters,
+            radiusMeters = normalizedRadius,
             regionContextKey = regionContextKey,
         )
         val cacheKey = listOf(
             normalizedQuery.lowercase(),
             language.lowercase(),
-            context.regionContextKey ?: region.orEmpty(),
+            context.regionContextKey ?: normalizedRegion.orEmpty(),
             latitude?.toString().orEmpty(),
             longitude?.toString().orEmpty(),
-            radiusMeters?.toString().orEmpty(),
+            normalizedRadius?.toString().orEmpty(),
         ).joinToString("|")
 
         val cached = placeSearchCacheRepository.get(cacheKey)

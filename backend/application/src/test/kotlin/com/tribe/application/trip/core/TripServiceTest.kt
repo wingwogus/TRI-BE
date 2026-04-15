@@ -1,6 +1,8 @@
 package com.tribe.application.trip.core
 
 import com.tribe.application.redis.TripInvitationRepository
+import com.tribe.application.exception.ErrorCode
+import com.tribe.application.exception.business.BusinessException
 import com.tribe.application.security.CurrentActor
 import com.tribe.application.trip.event.TripRealtimeEventPublisher
 import com.tribe.application.trip.member.TripMemberIntegrityService
@@ -72,6 +74,48 @@ class TripServiceTest {
         assertEquals("Trip", result.title)
         assertEquals(1, result.members.size)
         assertEquals("tribe", result.members.first().nickname)
+    }
+
+    @Test
+    fun `createTrip saves matching region code`() {
+        val member = Member(id = 1L, email = "user@example.com", passwordHash = "hashed", nickname = "tribe")
+        `when`(currentActor.requireUserId()).thenReturn(1L)
+        `when`(memberRepository.findById(1L)).thenReturn(java.util.Optional.of(member))
+        `when`(tripRepository.save(any(Trip::class.java))).thenAnswer { it.arguments[0] as Trip }
+
+        val result = tripService.createTrip(
+            TripCommand.Create("Trip", LocalDate.now(), LocalDate.now().plusDays(1), Country.JAPAN.code, "JP_TOKYO"),
+        )
+
+        assertEquals("JP_TOKYO", result.regionCode)
+    }
+
+    @Test
+    fun `createTrip rejects mismatched region code`() {
+        val member = Member(id = 1L, email = "user@example.com", passwordHash = "hashed", nickname = "tribe")
+        `when`(currentActor.requireUserId()).thenReturn(1L)
+        `when`(memberRepository.findById(1L)).thenReturn(java.util.Optional.of(member))
+
+        val ex = assertThrows(BusinessException::class.java) {
+            tripService.createTrip(
+                TripCommand.Create("Trip", LocalDate.now(), LocalDate.now().plusDays(1), Country.JAPAN.code, "KR_JEJU"),
+            )
+        }
+
+        assertEquals(ErrorCode.INVALID_INPUT, ex.errorCode)
+    }
+
+    @Test
+    fun `updateTrip clears region code when blank is requested`() {
+        val trip = Trip("Trip", LocalDate.now(), LocalDate.now().plusDays(1), Country.JAPAN, "JP_TOKYO")
+        `when`(tripRepository.findTripWithMembersById(5L)).thenReturn(trip)
+
+        val result = tripService.updateTrip(
+            TripCommand.Update(5L, "Trip", trip.startDate, trip.endDate, Country.JAPAN.code, ""),
+        )
+
+        assertEquals(null, result.regionCode)
+        assertEquals(null, trip.regionCode)
     }
 
     @Test

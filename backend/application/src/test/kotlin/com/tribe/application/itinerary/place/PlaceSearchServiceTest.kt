@@ -7,7 +7,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
-import org.mockito.Mockito.never
 import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
@@ -48,13 +47,50 @@ class PlaceSearchServiceTest {
                 longitude = 2.0,
             ),
         )
-        `when`(cacheRepository.get("tower|ko|country:JP|35.0|139.0|500000")).thenReturn(cached)
+        `when`(cacheRepository.get("tower|ko|country:JP|35.0|139.0|50000")).thenReturn(cached)
         `when`(placeCatalogService.mergeWithCanonical(cached)).thenReturn(cached)
 
         val result = service.search("tower", "ko", "JP", 35.0, 139.0, 500000, "country:JP")
 
         assertEquals(1, result.size)
         verifyNoInteractions(placeSearchGateway)
+    }
+
+    @Test
+    fun `search clamps radius before gateway call`() {
+        val expectedContext = PlaceSearchContext(
+            regionCode = "JP",
+            latitude = 35.0,
+            longitude = 139.0,
+            radiusMeters = 50_000,
+            regionContextKey = "country:JP",
+        )
+        `when`(cacheRepository.get("tower|ko|country:JP|35.0|139.0|50000")).thenReturn(null)
+        `when`(placeSearchGateway.search("tower", "ko", expectedContext)).thenReturn(emptyList())
+        `when`(placeCatalogService.mergeWithCanonical(emptyList())).thenReturn(emptyList())
+
+        val result = service.search("tower", "ko", "JP", 35.0, 139.0, 500000, "country:JP")
+
+        assertEquals(0, result.size)
+        verify(placeSearchGateway).search("tower", "ko", expectedContext)
+    }
+
+    @Test
+    fun `search defaults radius and normalizes region when coordinates exist`() {
+        val expectedContext = PlaceSearchContext(
+            regionCode = "JP",
+            latitude = 35.0,
+            longitude = 139.0,
+            radiusMeters = 50_000,
+            regionContextKey = "country:JP",
+        )
+        `when`(cacheRepository.get("tower|ko|country:JP|35.0|139.0|50000")).thenReturn(null)
+        `when`(placeSearchGateway.search("tower", "ko", expectedContext)).thenReturn(emptyList())
+        `when`(placeCatalogService.mergeWithCanonical(emptyList())).thenReturn(emptyList())
+
+        service.search("tower", "ko", "jp", 35.0, 139.0, null, "country:JP")
+
+        verify(placeSearchGateway).search("tower", "ko", expectedContext)
     }
 
     @Test

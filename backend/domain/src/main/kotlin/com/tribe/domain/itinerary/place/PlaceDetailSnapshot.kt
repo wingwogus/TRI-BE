@@ -35,7 +35,7 @@ class PlaceDetailSnapshot(
     var regularOpeningHoursJson: String? = null,
     @Column(name = "current_opening_hours_json", columnDefinition = "TEXT")
     var currentOpeningHoursJson: String? = null,
-    @Column(name = "primary_photo_name")
+    @Column(name = "primary_photo_name", columnDefinition = "TEXT")
     var primaryPhotoName: String? = null,
     @Column(name = "editorial_summary", columnDefinition = "TEXT")
     var editorialSummary: String? = null,

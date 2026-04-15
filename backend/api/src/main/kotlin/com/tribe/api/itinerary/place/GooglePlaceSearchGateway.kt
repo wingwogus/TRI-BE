@@ -20,6 +20,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.HttpHeaders
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.WebClientResponseException
+import java.util.Locale
 
 @Component
 @ConditionalOnProperty(name = ["tribe.itinerary.place-search.enabled"], havingValue = "true", matchIfMissing = true)
@@ -28,26 +30,17 @@ class GooglePlaceSearchGateway(
     private val objectMapper: ObjectMapper,
     @Value("\${google.maps.key}") private val apiKey: String,
 ) : PlaceSearchGateway {
+    companion object {
+        private const val MAX_RADIUS_METERS = 50_000
+    }
+
     private val logger = LoggerFactory.getLogger(javaClass)
     private val webClient = webClientBuilder.build()
 
     override fun search(query: String?, language: String, context: PlaceSearchContext): List<PlaceSearchResult> {
-        val body = mutableMapOf<String, Any?>(
-            "textQuery" to query,
-            "languageCode" to language,
-            "regionCode" to context.regionCode,
-        )
-        if (context.latitude != null && context.longitude != null) {
-            body["locationBias"] = mapOf(
-                "circle" to mapOf(
-                    "center" to mapOf(
-                        "latitude" to context.latitude,
-                        "longitude" to context.longitude,
-                    ),
-                    "radius" to (context.radiusMeters ?: 500000),
-                ),
-            )
-        }
+        val body = buildSearchRequestBody(query, language, context) ?: return emptyList()
+        val normalizedRegionCode = body["regionCode"] as? String
+        val radiusMeters = ((body["locationBias"] as? Map<*, *>)?.get("circle") as? Map<*, *>)?.get("radius")
 
         val response = webClient.post()
             .uri("https://places.googleapis.com/v1/places:searchText")
@@ -59,6 +52,16 @@ class GooglePlaceSearchGateway(
             .bodyValue(body)
             .retrieve()
             .bodyToMono(PlacesResponse::class.java)
+            .doOnError(WebClientResponseException::class.java) { ex ->
+                logger.error(
+                    "Google Places searchText failed: status={}, regionCode={}, radiusMeters={}, body={}",
+                    ex.statusCode.value(),
+                    normalizedRegionCode,
+                    radiusMeters,
+                    ex.responseBodyAsString,
+                    ex,
+                )
+            }
             .doOnError { logger.error("Error calling Google Places API", it) }
             .block()
             ?: throw BusinessException(ErrorCode.EXTERNAL_API_ERROR)
@@ -118,7 +121,7 @@ class GooglePlaceSearchGateway(
             googleMapsUri = response.googleMapsUri,
             rating = response.rating,
             userRatingCount = response.userRatingCount,
-            priceLevel = response.priceLevel,
+            priceLevel = parsePriceLevel(response.priceLevel),
             regularOpeningHoursJson = regularOpeningHoursJson,
             currentOpeningHoursJson = currentOpeningHoursJson,
             primaryPhotoName = response.photos?.firstOrNull()?.name,
@@ -169,7 +172,7 @@ class GooglePlaceSearchGateway(
 
         val route = response.routes.firstOrNull() ?: return null
         val leg = route.legs.firstOrNull() ?: return null
-        val origin = search(route.originName ?: "", "ko", PlaceSearchContext(regionCode = null)).firstOrNull()
+        val origin = searchRoutePlaceByName(route.originName)
             ?: PlaceSearchResult(
                 externalPlaceId = originPlaceId,
                 placeName = route.originName ?: "출발지",
@@ -177,7 +180,7 @@ class GooglePlaceSearchGateway(
                 latitude = 0.0,
                 longitude = 0.0,
             )
-        val destination = search(route.destinationName ?: "", "ko", PlaceSearchContext(regionCode = null)).firstOrNull()
+        val destination = searchRoutePlaceByName(route.destinationName)
             ?: PlaceSearchResult(
                 externalPlaceId = destinationPlaceId,
                 placeName = route.destinationName ?: "도착지",
@@ -211,6 +214,54 @@ class GooglePlaceSearchGateway(
                 )
             },
         )
+    }
+
+    internal fun buildSearchRequestBody(
+        query: String?,
+        language: String,
+        context: PlaceSearchContext,
+    ): Map<String, Any>? {
+        val normalizedQuery = query?.trim()?.takeIf { it.isNotBlank() } ?: return null
+        val normalizedRegionCode = context.regionCode
+            ?.trim()
+            ?.uppercase(Locale.ROOT)
+            ?.takeIf { it.length == 2 && it.all(Char::isLetter) }
+
+        return buildMap<String, Any> {
+            put("textQuery", normalizedQuery)
+            put("languageCode", language)
+            normalizedRegionCode?.let { put("regionCode", it) }
+            if (context.latitude != null && context.longitude != null) {
+                val radius = (context.radiusMeters ?: MAX_RADIUS_METERS).coerceIn(1, MAX_RADIUS_METERS)
+                put(
+                    "locationBias",
+                    mapOf(
+                        "circle" to mapOf(
+                            "center" to mapOf(
+                                "latitude" to context.latitude,
+                                "longitude" to context.longitude,
+                            ),
+                            "radius" to radius,
+                        ),
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun searchRoutePlaceByName(name: String?): PlaceSearchResult? {
+        val normalizedName = name?.trim()?.takeIf { it.isNotBlank() } ?: return null
+        return search(normalizedName, "ko", PlaceSearchContext(regionCode = null)).firstOrNull()
+    }
+
+    internal fun parsePriceLevel(priceLevel: String?): Int? = when (priceLevel) {
+        null, "PRICE_LEVEL_UNSPECIFIED" -> null
+        "PRICE_LEVEL_FREE" -> 0
+        "PRICE_LEVEL_INEXPENSIVE" -> 1
+        "PRICE_LEVEL_MODERATE" -> 2
+        "PRICE_LEVEL_EXPENSIVE" -> 3
+        "PRICE_LEVEL_VERY_EXPENSIVE" -> 4
+        else -> null
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -262,7 +313,7 @@ class GooglePlaceSearchGateway(
         val googleMapsUri: String?,
         val rating: Double?,
         val userRatingCount: Int?,
-        val priceLevel: Int?,
+        val priceLevel: String?,
         val regularOpeningHours: JsonNode?,
         val currentOpeningHours: JsonNode?,
         val photos: List<PlacesResponse.Photo>?,
