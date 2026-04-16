@@ -25,7 +25,7 @@ class TripReviewController(
         @PathVariable tripId: Long,
         @RequestBody request: TripReviewRequests.CreateReviewRequest,
     ): ResponseEntity<ApiResponse<TripReviewResponses.ReviewDetailResponse>> {
-        val result = tripReviewService.createReview(tripId, TripReviewCommand.Create(tripId, request.concept))
+        val result = tripReviewService.createReview(tripId, request.toCommand(tripId))
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(TripReviewResponses.ReviewDetailResponse.from(result)))
     }
 

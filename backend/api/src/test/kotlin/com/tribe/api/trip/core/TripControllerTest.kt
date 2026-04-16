@@ -13,8 +13,11 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.context.annotation.Import
+import org.springframework.data.domain.PageImpl
+import org.springframework.data.domain.PageRequest
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
@@ -65,7 +68,35 @@ class TripControllerTest(
         )
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.country", equalTo("JP")))
             .andExpect(jsonPath("$.data.regionCode", equalTo("JP_TOKYO")))
+    }
+
+    @Test
+    fun `getAllTrips returns localized country in summary response`() {
+        `when`(tripService.getAllTrips(PageRequest.of(0, 10, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "startDate"))))
+            .thenReturn(
+                PageImpl(
+                    listOf(
+                        TripResult.SimpleTrip(
+                            tripId = 5L,
+                            title = "Trip",
+                            startDate = LocalDate.of(2026, 4, 12),
+                            endDate = LocalDate.of(2026, 4, 13),
+                            country = "일본",
+                            regionCode = "JP_TOKYO",
+                            memberCount = 2,
+                        ),
+                    ),
+                    PageRequest.of(0, 10),
+                    1,
+                ),
+            )
+
+        mockMvc.perform(get("/api/v1/trips"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data[0].country", equalTo("일본")))
+            .andExpect(jsonPath("$.data[0].regionCode", equalTo("JP_TOKYO")))
     }
 
     @Test
@@ -134,6 +165,7 @@ class TripControllerTest(
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.tripId", equalTo(5)))
+            .andExpect(jsonPath("$.data.country", equalTo("JP")))
     }
 
     private fun sampleTripDetail() = TripResult.TripDetail(

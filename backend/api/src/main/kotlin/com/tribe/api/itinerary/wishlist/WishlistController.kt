@@ -25,16 +25,7 @@ class WishlistController(
         @PathVariable tripId: Long,
         @RequestBody request: WishlistRequests.WishlistAddRequest,
     ): ResponseEntity<ApiResponse<WishlistResponses.WishlistItemResponse>> {
-        val result = wishlistService.addWishList(
-            WishlistCommand.Add(
-                tripId,
-                request.externalPlaceId,
-                request.placeName,
-                request.address,
-                request.latitude,
-                request.longitude,
-            )
-        )
+        val result = wishlistService.addWishList(request.toCommand(tripId))
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.ok(WishlistResponses.WishlistItemResponse.from(result)))
     }
@@ -58,7 +49,7 @@ class WishlistController(
         @PathVariable tripId: Long,
         @RequestBody request: WishlistRequests.WishlistDeleteRequest,
     ): ResponseEntity<ApiResponse<Unit>> {
-        wishlistService.deleteWishlistItems(WishlistCommand.Delete(tripId, request.wishlistItemIds))
+        wishlistService.deleteWishlistItems(request.toCommand(tripId))
         return ResponseEntity.ok(ApiResponse.empty(Unit))
     }
 }
