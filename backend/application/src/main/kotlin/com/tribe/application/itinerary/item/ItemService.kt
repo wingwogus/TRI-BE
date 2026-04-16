@@ -3,7 +3,7 @@ package com.tribe.application.itinerary.item
 import com.tribe.application.exception.ErrorCode
 import com.tribe.application.exception.business.BusinessException
 import com.tribe.application.itinerary.place.OpeningHoursEvaluator
-import com.tribe.application.itinerary.place.PlaceViewAssembler
+import com.tribe.application.itinerary.place.PlaceResultAssembler
 import com.tribe.application.itinerary.place.PlaceSearchService
 import com.tribe.application.itinerary.place.RouteDetails
 import com.tribe.application.security.CurrentActor
@@ -26,14 +26,14 @@ class ItemService(
     private val itineraryItemRepository: ItineraryItemRepository,
     private val placeRepository: PlaceRepository,
     private val placeSearchService: PlaceSearchService,
-    private val placeViewAssembler: PlaceViewAssembler,
+    private val placeResultAssembler: PlaceResultAssembler,
     private val openingHoursEvaluator: OpeningHoursEvaluator,
     private val currentActor: CurrentActor,
     private val tripRealtimeEventPublisher: TripRealtimeEventPublisher,
     private val tripAuthorizationPolicy: TripAuthorizationPolicy,
     private val tripRepository: TripRepository,
 ) {
-    fun createItem(command: ItemCommand.Create): ItemResult.ItemView {
+    fun createItem(command: ItemCommand.Create): ItemResult.Item {
         tripAuthorizationPolicy.isTripMember(command.tripId)
         val trip = tripRepository.findById(command.tripId)
             .orElseThrow { BusinessException(ErrorCode.TRIP_NOT_FOUND) }
@@ -56,7 +56,7 @@ class ItemService(
                 memo = normalizeNullableText(command.memo),
             ),
         )
-        val result = toItemView(item)
+        val result = toItem(item)
         tripRealtimeEventPublisher.publish(
             TripRealtimeEvent(
                 type = TripRealtimeEventType.ITINERARY,
@@ -69,23 +69,23 @@ class ItemService(
     }
 
     @Transactional(readOnly = true)
-    fun getItem(tripId: Long, itemId: Long): ItemResult.ItemView {
+    fun getItem(tripId: Long, itemId: Long): ItemResult.Item {
         tripAuthorizationPolicy.isTripMember(tripId)
-        return toItemView(findItem(tripId, itemId))
+        return toItem(findItem(tripId, itemId))
     }
 
     @Transactional(readOnly = true)
-    fun getAllItems(tripId: Long, visitDay: Int?): List<ItemResult.ItemView> {
+    fun getAllItems(tripId: Long, visitDay: Int?): List<ItemResult.Item> {
         tripAuthorizationPolicy.isTripMember(tripId)
         return if (visitDay != null) {
             itineraryItemRepository.findByTripIdAndVisitDayOrderByOrderAsc(tripId, visitDay)
-                .map(::toItemView)
+                .map(::toItem)
         } else {
-            itineraryItemRepository.findByTripIdOrderByVisitDayAndOrder(tripId).map(::toItemView)
+            itineraryItemRepository.findByTripIdOrderByVisitDayAndOrder(tripId).map(::toItem)
         }
     }
 
-    fun updateItem(command: ItemCommand.Update): ItemResult.ItemView {
+    fun updateItem(command: ItemCommand.Update): ItemResult.Item {
         tripAuthorizationPolicy.isTripMember(command.tripId)
         val item = findItem(command.tripId, command.itemId)
         val previousVisitDay = item.visitDay
@@ -100,7 +100,7 @@ class ItemService(
         item.time = command.time
         item.memo = normalizeNullableText(command.memo)
 
-        val result = toItemView(item)
+        val result = toItem(item)
         tripRealtimeEventPublisher.publish(
             TripRealtimeEvent(
                 type = TripRealtimeEventType.ITINERARY,
@@ -115,7 +115,7 @@ class ItemService(
         return result
     }
 
-    fun updateItemOrder(command: ItemCommand.OrderUpdate): List<ItemResult.ItemView> {
+    fun updateItemOrder(command: ItemCommand.OrderUpdate): List<ItemResult.Item> {
         tripAuthorizationPolicy.isTripMember(command.tripId)
         val newOrderMap = command.items.associateBy({ it.itemId }, { it.itemOrder })
         if (newOrderMap.size != command.items.size) throw BusinessException(ErrorCode.INVALID_INPUT_VALUE)
@@ -129,7 +129,7 @@ class ItemService(
             item.order = orderItem.itemOrder
         }
 
-        val result = items.sortedWith(compareBy(ItineraryItem::visitDay, ItineraryItem::order)).map(::toItemView)
+        val result = items.sortedWith(compareBy(ItineraryItem::visitDay, ItineraryItem::order)).map(::toItem)
         tripRealtimeEventPublisher.publish(
             TripRealtimeEvent(
                 type = TripRealtimeEventType.ITINERARY,
@@ -186,16 +186,16 @@ class ItemService(
         return item
     }
 
-    private fun toItemView(item: ItineraryItem): ItemResult.ItemView {
-        val placeTypeSummary = placeViewAssembler.toPlaceTypeSummary(item.place)
-        val photoHint = placeViewAssembler.toPhotoHint(item.place)?.let { ItemResult.PhotoHint(it.name, it.photoUri) }
-        val placeDetailSummary = placeViewAssembler.toDetailSummary(item.place)
+    private fun toItem(item: ItineraryItem): ItemResult.Item {
+        val placeTypeSummary = placeResultAssembler.toPlaceTypeSummary(item.place)
+        val photoHint = placeResultAssembler.toPhotoHint(item.place)?.let { ItemResult.PhotoHint(it.name, it.photoUri) }
+        val placeDetailSummary = placeResultAssembler.toDetailSummary(item.place)
         val openingStatus = if (item.place != null) {
             openingHoursEvaluator.evaluate(item, item.trip.startDate)
         } else {
             null
         }
-        return ItemResult.ItemView.from(item, placeTypeSummary, photoHint, placeDetailSummary, openingStatus)
+        return ItemResult.Item.from(item, placeTypeSummary, photoHint, placeDetailSummary, openingStatus)
     }
 
     private fun normalizeNullableText(value: String?): String? =

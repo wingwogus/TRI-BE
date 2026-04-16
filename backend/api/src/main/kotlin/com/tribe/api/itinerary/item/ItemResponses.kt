@@ -1,9 +1,7 @@
 package com.tribe.api.itinerary.item
 
-import com.tribe.application.itinerary.place.PlaceTypeSummary
-import com.tribe.application.itinerary.place.RouteDetails
-import com.tribe.application.itinerary.place.PlaceDetailSummary
 import com.tribe.application.itinerary.item.ItemResult
+import com.tribe.application.itinerary.place.RouteDetails
 import com.tribe.api.itinerary.place.PlaceResponses
 import java.time.LocalDateTime
 
@@ -41,7 +39,7 @@ object ItemResponses {
         val openingStatusWarning: String?,
     ) {
         companion object {
-            fun from(view: ItemResult.ItemView) = ItemResponse(
+            fun from(view: ItemResult.Item) = ItemResponse(
                 itemId = view.itemId,
                 tripId = view.tripId,
                 visitDay = view.visitDay,

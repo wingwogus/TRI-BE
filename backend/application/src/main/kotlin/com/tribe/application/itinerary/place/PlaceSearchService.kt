@@ -15,7 +15,7 @@ class PlaceSearchService(
     private val placeSearchCacheRepository: PlaceSearchCacheRepository,
     private val placeCatalogService: PlaceCatalogService,
     private val placeRepository: PlaceRepository,
-    private val placeViewAssembler: PlaceViewAssembler,
+    private val placeResultAssembler: PlaceResultAssembler,
 ) {
     companion object {
         private const val MAX_RADIUS_METERS = 50_000
@@ -29,7 +29,7 @@ class PlaceSearchService(
         longitude: Double? = null,
         radiusMeters: Int? = null,
         regionContextKey: String? = null,
-    ): List<PlaceSearchResult> {
+    ): List<PlaceResult.SearchItem> {
         val normalizedQuery = query?.trim()?.takeIf { it.isNotBlank() } ?: return emptyList()
         val normalizedRegion = region
             ?.trim()
@@ -79,10 +79,10 @@ class PlaceSearchService(
             ?: throw BusinessException(ErrorCode.EXTERNAL_API_ERROR)
 
     @Transactional
-    fun getPlaceDetail(placeId: Long, language: String = "ko"): PlaceDetailView {
+    fun getPlaceDetail(placeId: Long, language: String = "ko"): PlaceResult.Detail {
         val place = placeRepository.findById(placeId)
             .orElseThrow { BusinessException(ErrorCode.PLACE_NOT_FOUND) }
         placeCatalogService.enrichDetailsIfNeeded(place, language)
-        return placeViewAssembler.toDetailView(place)
+        return placeResultAssembler.toDetail(place)
     }
 }

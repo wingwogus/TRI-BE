@@ -15,12 +15,12 @@ class RedisPlaceSearchCacheRepository(
         private const val PREFIX = "place-search:"
     }
 
-    override fun get(key: String): List<PlaceSearchResult>? {
+    override fun get(key: String): List<PlaceSearchGateway.SearchHit>? {
         val payload = redis.opsForValue().get(PREFIX + key) ?: return null
-        return objectMapper.readValue(payload, object : TypeReference<List<PlaceSearchResult>>() {})
+        return objectMapper.readValue(payload, object : TypeReference<List<PlaceSearchGateway.SearchHit>>() {})
     }
 
-    override fun put(key: String, value: List<PlaceSearchResult>, ttl: Duration) {
+    override fun put(key: String, value: List<PlaceSearchGateway.SearchHit>, ttl: Duration) {
         redis.opsForValue().set(PREFIX + key, objectMapper.writeValueAsString(value), ttl)
     }
 }

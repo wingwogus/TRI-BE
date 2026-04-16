@@ -1,8 +1,8 @@
 package com.tribe.application.itinerary.item
 
 import com.tribe.application.itinerary.place.NormalizedPlaceCategoryKey
-import com.tribe.application.itinerary.place.PlaceCategoryNormalizer
 import com.tribe.application.itinerary.place.PlaceDetailSummary
+import com.tribe.application.itinerary.place.PlaceResultAssembler
 import com.tribe.application.itinerary.place.PlaceTypeSummary
 import com.tribe.domain.itinerary.item.ItineraryItem
 import java.time.LocalDateTime
@@ -19,7 +19,7 @@ object ItemResult {
         val address: String?,
     )
 
-    data class ItemView(
+    data class Item(
         val itemId: Long,
         val tripId: Long,
         val visitDay: Int,
@@ -44,7 +44,7 @@ object ItemResult {
                 photoHint: PhotoHint? = null,
                 placeDetailSummary: PlaceDetailSummary? = null,
                 openingStatusWarning: String? = null,
-            ) = ItemView(
+            ) = Item(
                 itemId = item.id,
                 tripId = item.trip.id,
                 visitDay = item.visitDay,
@@ -63,9 +63,7 @@ object ItemResult {
                     )
                 },
                 placeTypeSummary = placeTypeSummary,
-                normalizedCategoryKey = placeTypeSummary?.let {
-                    PlaceCategoryNormalizer.normalize(it.primaryType, it.types)
-                },
+                normalizedCategoryKey = PlaceResultAssembler.toNormalizedCategoryKey(placeTypeSummary),
                 photoHint = photoHint,
                 placeDetailSummary = placeDetailSummary,
                 openingStatusWarning = openingStatusWarning,

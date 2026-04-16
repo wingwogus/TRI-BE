@@ -77,8 +77,8 @@ enum class ItineraryAction {
 
 data class ItineraryEvent(
     val action: ItineraryAction,
-    val item: ItemResult.ItemView? = null,
-    val items: List<ItemResult.ItemView>? = null,
+    val item: ItemResult.Item? = null,
+    val items: List<ItemResult.Item>? = null,
     val deletedItemId: Long? = null,
     val orderChanges: List<OrderChange>? = null,
 ) {

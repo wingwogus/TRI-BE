@@ -16,13 +16,13 @@ import java.time.LocalDateTime
 @Transactional
 class PlaceCatalogService(
     private val objectMapper: ObjectMapper,
-    private val placeViewAssembler: PlaceViewAssembler,
+    private val placeResultAssembler: PlaceResultAssembler,
     private val placeRepository: PlaceRepository,
     private val detailSnapshotRepository: PlaceDetailSnapshotRepository,
     private val openingPeriodRepository: PlaceRegularOpeningPeriodRepository,
     private val placeSearchGateway: PlaceSearchGateway,
 ) {
-    fun findExistingPlaces(results: List<PlaceSearchResult>): Map<String, Place> {
+    fun findExistingPlaces(results: List<PlaceSearchGateway.SearchHit>): Map<String, Place> {
         if (results.isEmpty()) return emptyMap()
         return placeRepository.findByExternalPlaceIdIn(results.map { it.externalPlaceId }).associateBy { it.externalPlaceId }
     }
@@ -50,18 +50,9 @@ class PlaceCatalogService(
         return place
     }
 
-    fun mergeWithCanonical(results: List<PlaceSearchResult>): List<PlaceSearchResult> {
+    fun mergeWithCanonical(results: List<PlaceSearchGateway.SearchHit>): List<PlaceResult.SearchItem> {
         val existingMap = findExistingPlaces(results)
-        return results.map { result ->
-            val place = existingMap[result.externalPlaceId]
-            result.copy(
-                placeId = place?.id,
-                placeTypeSummary = result.placeTypeSummary ?: placeViewAssembler.toPlaceTypeSummary(place),
-                normalizedCategoryKey = result.normalizedCategoryKey ?: placeViewAssembler.toNormalizedCategoryKey(place),
-                photoHint = null,
-                placeDetailSummary = result.placeDetailSummary ?: placeViewAssembler.toDetailSummary(place),
-            )
-        }
+        return results.map { result -> placeResultAssembler.toSearchItem(result, existingMap[result.externalPlaceId]) }
     }
 
     fun enrichDetailsIfNeeded(place: Place, language: String = "ko"): Place {
@@ -71,9 +62,9 @@ class PlaceCatalogService(
         return place
     }
 
-    private fun applyDetails(place: Place, details: PlaceDetailsResult) {
-        place.googlePrimaryType = details.placeTypeSummary?.primaryType
-        place.googleTypesJson = details.placeTypeSummary?.types?.let(objectMapper::writeValueAsString)
+    private fun applyDetails(place: Place, details: PlaceSearchGateway.DetailsPayload) {
+        place.googlePrimaryType = details.primaryType
+        place.googleTypesJson = details.types.takeIf { it.isNotEmpty() }?.let(objectMapper::writeValueAsString)
         place.businessStatus = details.businessStatus
         place.utcOffsetMinutes = details.utcOffsetMinutes
         place.typeSummarySyncedAt = LocalDateTime.now()

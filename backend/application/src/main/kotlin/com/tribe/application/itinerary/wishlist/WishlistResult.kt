@@ -1,9 +1,8 @@
 package com.tribe.application.itinerary.wishlist
 
-import com.tribe.application.itinerary.place.PlaceCategoryNormalizer
 import com.tribe.application.itinerary.place.PlaceDetailSummary
+import com.tribe.application.itinerary.place.PlaceResultAssembler
 import com.tribe.application.itinerary.place.PlaceTypeSummary
-import com.tribe.application.itinerary.place.PlaceTypeSummaryFactory
 import com.tribe.application.itinerary.place.NormalizedPlaceCategoryKey
 import com.tribe.domain.itinerary.wishlist.WishlistItem
 import java.math.BigDecimal
@@ -35,7 +34,8 @@ object WishlistResult {
     ) {
         companion object {
             fun from(entity: WishlistItem): Item {
-                val googleTypes = PlaceTypeSummaryFactory.decodeGoogleTypes(entity.place.googleTypesJson)
+                val assembler = PlaceResultAssembler()
+                val placeTypeSummary = assembler.toPlaceTypeSummary(entity.place)
                 return Item(
                     wishlistItemId = entity.id,
                     placeId = entity.place.id,
@@ -43,20 +43,10 @@ object WishlistResult {
                     address = entity.place.address,
                     latitude = entity.place.latitude,
                     longitude = entity.place.longitude,
-                    placeTypeSummary = PlaceTypeSummaryFactory.fromRawTypes(entity.place.googlePrimaryType, googleTypes),
-                    normalizedCategoryKey = PlaceCategoryNormalizer.normalize(
-                        entity.place.googlePrimaryType,
-                        googleTypes,
-                    ),
+                    placeTypeSummary = placeTypeSummary,
+                    normalizedCategoryKey = PlaceResultAssembler.toNormalizedCategoryKey(placeTypeSummary),
                     photoHint = null,
-                    placeDetailSummary = entity.place.detailSnapshot?.let {
-                        PlaceDetailSummary(
-                            businessStatus = entity.place.businessStatus,
-                            rating = it.rating,
-                            userRatingCount = it.userRatingCount,
-                            editorialSummary = it.editorialSummary,
-                        )
-                    },
+                    placeDetailSummary = assembler.toDetailSummary(entity.place),
                     adder = Adder(
                         tripMemberId = entity.adder.id,
                         memberId = entity.adder.member?.id,

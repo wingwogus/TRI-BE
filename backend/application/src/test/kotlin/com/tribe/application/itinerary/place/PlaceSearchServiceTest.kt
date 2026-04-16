@@ -21,7 +21,7 @@ class PlaceSearchServiceTest {
     @Mock private lateinit var cacheRepository: PlaceSearchCacheRepository
     @Mock private lateinit var placeCatalogService: PlaceCatalogService
     @Mock private lateinit var placeRepository: PlaceRepository
-    @Mock private lateinit var placeViewAssembler: PlaceViewAssembler
+    @Mock private lateinit var placeResultAssembler: PlaceResultAssembler
 
     private lateinit var service: PlaceSearchService
 
@@ -32,14 +32,24 @@ class PlaceSearchServiceTest {
             placeSearchCacheRepository = cacheRepository,
             placeCatalogService = placeCatalogService,
             placeRepository = placeRepository,
-            placeViewAssembler = placeViewAssembler,
+            placeResultAssembler = placeResultAssembler,
         )
     }
 
     @Test
     fun `search returns cached results without gateway call`() {
         val cached = listOf(
-            PlaceSearchResult(
+            PlaceSearchGateway.SearchHit(
+                externalPlaceId = "place-1",
+                placeName = "Tokyo Tower",
+                address = "Tokyo",
+                latitude = 1.0,
+                longitude = 2.0,
+            ),
+        )
+        val canonical = listOf(
+            PlaceResult.SearchItem(
+                placeId = 10L,
                 externalPlaceId = "place-1",
                 placeName = "Tokyo Tower",
                 address = "Tokyo",
@@ -48,7 +58,7 @@ class PlaceSearchServiceTest {
             ),
         )
         `when`(cacheRepository.get("tower|ko|country:JP|35.0|139.0|50000")).thenReturn(cached)
-        `when`(placeCatalogService.mergeWithCanonical(cached)).thenReturn(cached)
+        `when`(placeCatalogService.mergeWithCanonical(cached)).thenReturn(canonical)
 
         val result = service.search("tower", "ko", "JP", 35.0, 139.0, 500000, "country:JP")
 
@@ -103,7 +113,7 @@ class PlaceSearchServiceTest {
             longitude = BigDecimal.TEN,
         )
         ReflectionTestUtils.setField(place, "id", 10L)
-        val view = PlaceDetailView(
+        val view = PlaceResult.Detail(
             placeId = 10L,
             externalPlaceId = "place-1",
             placeName = "Tokyo Tower",
@@ -123,7 +133,7 @@ class PlaceSearchServiceTest {
         )
         `when`(placeRepository.findById(10L)).thenReturn(Optional.of(place))
         `when`(placeCatalogService.enrichDetailsIfNeeded(place, "ko")).thenReturn(place)
-        `when`(placeViewAssembler.toDetailView(place)).thenReturn(view)
+        `when`(placeResultAssembler.toDetail(place)).thenReturn(view)
 
         val result = service.getPlaceDetail(10L, "ko")
 

@@ -4,7 +4,7 @@ import com.tribe.application.trip.ai.GeminiGateway
 import com.tribe.application.exception.ErrorCode
 import com.tribe.application.exception.business.BusinessException
 import com.tribe.application.itinerary.place.PlaceCatalogService
-import com.tribe.application.itinerary.place.PlaceSearchResult
+import com.tribe.application.itinerary.place.PlaceResult
 import com.tribe.application.itinerary.place.PlaceSearchService
 import com.tribe.domain.itinerary.item.ItineraryItem
 import com.tribe.domain.itinerary.place.Place
@@ -74,7 +74,7 @@ class TripReviewServiceTest {
             ),
         ).thenReturn(
             listOf(
-                PlaceSearchResult(
+                PlaceResult.SearchItem(
                     externalPlaceId = "place1",
                     placeName = "오사카 성",
                     address = "오사카",

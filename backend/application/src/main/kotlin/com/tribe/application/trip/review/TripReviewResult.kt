@@ -1,9 +1,8 @@
 package com.tribe.application.trip.review
 
-import com.tribe.application.itinerary.place.PlaceCategoryNormalizer
 import com.tribe.application.itinerary.place.PlaceDetailSummary
+import com.tribe.application.itinerary.place.PlaceResultAssembler
 import com.tribe.application.itinerary.place.PlaceTypeSummary
-import com.tribe.application.itinerary.place.PlaceTypeSummaryFactory
 import com.tribe.application.itinerary.place.NormalizedPlaceCategoryKey
 import com.tribe.domain.trip.review.TripReview
 import java.time.LocalDateTime
@@ -23,13 +22,14 @@ object TripReviewResult {
     ) {
         companion object {
             fun from(review: TripReview): ReviewDetail {
+                val assembler = PlaceResultAssembler()
                 return ReviewDetail(
                     reviewId = review.id,
                     concept = review.concept,
                     content = review.content,
                     createdAt = review.createdAt,
                     recommendedPlaces = review.recommendedPlaces.map {
-                        val googleTypes = PlaceTypeSummaryFactory.decodeGoogleTypes(it.place.googleTypesJson)
+                        val placeTypeSummary = assembler.toPlaceTypeSummary(it.place)
                         RecommendedPlaceResult(
                             placeId = it.place.id,
                             externalPlaceId = it.place.externalPlaceId,
@@ -37,20 +37,10 @@ object TripReviewResult {
                             address = it.place.address,
                             latitude = it.place.latitude.toDouble(),
                             longitude = it.place.longitude.toDouble(),
-                            placeTypeSummary = PlaceTypeSummaryFactory.fromRawTypes(it.place.googlePrimaryType, googleTypes),
-                            normalizedCategoryKey = PlaceCategoryNormalizer.normalize(
-                                it.place.googlePrimaryType,
-                                googleTypes,
-                            ),
+                            placeTypeSummary = placeTypeSummary,
+                            normalizedCategoryKey = PlaceResultAssembler.toNormalizedCategoryKey(placeTypeSummary),
                             photoHint = null,
-                            placeDetailSummary = it.place.detailSnapshot?.let { snapshot ->
-                                PlaceDetailSummary(
-                                    businessStatus = it.place.businessStatus,
-                                    rating = snapshot.rating,
-                                    userRatingCount = snapshot.userRatingCount,
-                                    editorialSummary = snapshot.editorialSummary,
-                                )
-                            },
+                            placeDetailSummary = assembler.toDetailSummary(it.place),
                         )
                     },
                 )

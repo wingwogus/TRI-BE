@@ -28,20 +28,7 @@ class PlaceController(
         @RequestParam(required = false) regionContextKey: String?,
     ): ResponseEntity<ApiResponse<List<PlaceResponses.SearchResponse>>> {
         val result = placeSearchService.search(query, language, region, latitude, longitude, radiusMeters, regionContextKey)
-            .map {
-                PlaceResponses.SearchResponse(
-                    placeId = it.placeId,
-                    externalPlaceId = it.externalPlaceId,
-                    placeName = it.placeName,
-                    address = it.address,
-                    latitude = it.latitude,
-                    longitude = it.longitude,
-                    placeTypeSummary = it.placeTypeSummary?.let(PlaceResponses.PlaceTypeSummaryResponse::from),
-                    normalizedCategoryKey = it.normalizedCategoryKey?.name,
-                    photoHint = it.photoHint?.let(PlaceResponses.PhotoHintResponse::from),
-                    placeDetailSummary = it.placeDetailSummary?.let(PlaceResponses.PlaceDetailSummaryResponse::from),
-                )
-            }
+            .map(PlaceResponses.SearchResponse::from)
         return ResponseEntity.ok(ApiResponse.ok(result))
     }
 
@@ -52,26 +39,7 @@ class PlaceController(
     ): ResponseEntity<ApiResponse<PlaceResponses.DetailResponse>> {
         val detail = placeSearchService.getPlaceDetail(placeId, language)
         return ResponseEntity.ok(
-            ApiResponse.ok(
-                PlaceResponses.DetailResponse(
-                    placeId = detail.placeId,
-                    externalPlaceId = detail.externalPlaceId,
-                    placeName = detail.placeName,
-                    address = detail.address,
-                    latitude = detail.latitude,
-                    longitude = detail.longitude,
-                    placeTypeSummary = detail.placeTypeSummary?.let(PlaceResponses.PlaceTypeSummaryResponse::from),
-                    normalizedCategoryKey = detail.normalizedCategoryKey?.name,
-                    photoHint = detail.photoHint?.let(PlaceResponses.PhotoHintResponse::from),
-                    placeDetailSummary = detail.placeDetailSummary?.let(PlaceResponses.PlaceDetailSummaryResponse::from),
-                    formattedPhoneNumber = detail.formattedPhoneNumber,
-                    internationalPhoneNumber = detail.internationalPhoneNumber,
-                    websiteUri = detail.websiteUri,
-                    googleMapsUri = detail.googleMapsUri,
-                    regularOpeningHoursJson = detail.regularOpeningHoursJson,
-                    currentOpeningHoursJson = detail.currentOpeningHoursJson,
-                ),
-            ),
+            ApiResponse.ok(PlaceResponses.DetailResponse.from(detail)),
         )
     }
 

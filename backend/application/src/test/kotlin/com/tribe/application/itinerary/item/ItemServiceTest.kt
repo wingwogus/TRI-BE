@@ -3,9 +3,9 @@ package com.tribe.application.itinerary.item
 import com.tribe.application.exception.ErrorCode
 import com.tribe.application.exception.business.BusinessException
 import com.tribe.application.itinerary.place.OpeningHoursEvaluator
-import com.tribe.application.itinerary.place.PlaceViewAssembler
-import com.tribe.application.itinerary.place.PlaceSearchResult
 import com.tribe.application.itinerary.place.PlaceSearchService
+import com.tribe.application.itinerary.place.PlaceSearchGateway
+import com.tribe.application.itinerary.place.PlaceResultAssembler
 import com.tribe.application.itinerary.place.RouteDetails
 import com.tribe.application.security.CurrentActor
 import com.tribe.application.trip.event.TripRealtimeEventPublisher
@@ -41,7 +41,7 @@ class ItemServiceTest {
     @Mock private lateinit var placeRepository: PlaceRepository
     @Mock private lateinit var placeSearchService: PlaceSearchService
     @Mock private lateinit var tripRepository: TripRepository
-    @Mock private lateinit var placeViewAssembler: PlaceViewAssembler
+    @Mock private lateinit var placeResultAssembler: PlaceResultAssembler
     @Mock private lateinit var openingHoursEvaluator: OpeningHoursEvaluator
     @Mock private lateinit var tripMemberRepository: TripMemberRepository
     @Mock private lateinit var currentActor: CurrentActor
@@ -55,7 +55,7 @@ class ItemServiceTest {
             itineraryItemRepository = itineraryItemRepository,
             placeRepository = placeRepository,
             placeSearchService = placeSearchService,
-            placeViewAssembler = placeViewAssembler,
+            placeResultAssembler = placeResultAssembler,
             openingHoursEvaluator = openingHoursEvaluator,
             currentActor = currentActor,
             tripRealtimeEventPublisher = tripRealtimeEventPublisher,
@@ -247,14 +247,14 @@ class ItemServiceTest {
         `when`(placeSearchService.directions("origin", "dest", "walking")).thenReturn(
             RouteDetails(
                 travelMode = "WALKING",
-                originPlace = PlaceSearchResult(
+                originPlace = PlaceSearchGateway.SearchHit(
                     externalPlaceId = "origin",
                     placeName = "Origin",
                     address = "addr1",
                     latitude = 0.0,
                     longitude = 0.0,
                 ),
-                destinationPlace = PlaceSearchResult(
+                destinationPlace = PlaceSearchGateway.SearchHit(
                     externalPlaceId = "dest",
                     placeName = "Destination",
                     address = "addr2",

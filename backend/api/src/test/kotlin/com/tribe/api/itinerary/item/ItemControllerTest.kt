@@ -3,9 +3,9 @@ package com.tribe.api.itinerary.item
 import com.tribe.api.exception.GlobalExceptionHandler
 import com.tribe.application.itinerary.item.ItemCommand
 import com.tribe.application.itinerary.item.ItemResult
-import com.tribe.application.itinerary.place.PlaceDetailSummary
 import com.tribe.application.itinerary.item.ItemService
-import com.tribe.application.itinerary.place.PlaceSearchResult
+import com.tribe.application.itinerary.place.PlaceDetailSummary
+import com.tribe.application.itinerary.place.PlaceSearchGateway
 import com.tribe.application.itinerary.place.RouteDetails
 import com.tribe.application.security.TokenProvider
 import org.hamcrest.Matchers.equalTo
@@ -46,7 +46,7 @@ class ItemControllerTest(
                     memo = "Booked",
                 ),
             ),
-        ).thenReturn(sampleItemView())
+        ).thenReturn(sampleItem())
 
         mockMvc.perform(
             post("/api/v1/trips/5/items")
@@ -70,7 +70,7 @@ class ItemControllerTest(
 
     @Test
     fun `getAllItems returns collection`() {
-        `when`(itemService.getAllItems(5L, null)).thenReturn(listOf(sampleItemView()))
+        `when`(itemService.getAllItems(5L, null)).thenReturn(listOf(sampleItem()))
 
         mockMvc.perform(get("/api/v1/trips/5/items"))
             .andExpect(status().isOk)
@@ -83,7 +83,7 @@ class ItemControllerTest(
     fun `getAllItems keeps place detail summary response shape`() {
         `when`(itemService.getAllItems(5L, null)).thenReturn(
             listOf(
-                sampleItemView(
+                sampleItem(
                     placeDetailSummary = PlaceDetailSummary(
                         businessStatus = "OPERATIONAL",
                         rating = 4.7,
@@ -117,7 +117,7 @@ class ItemControllerTest(
                     ),
                 ),
             ),
-        ).thenReturn(listOf(sampleItemView(visitDay = 2, itemOrder = 2)))
+        ).thenReturn(listOf(sampleItem(visitDay = 2, itemOrder = 2)))
 
         mockMvc.perform(
             patch("/api/v1/trips/5/items/order")
@@ -135,14 +135,14 @@ class ItemControllerTest(
             listOf(
                 RouteDetails(
                     travelMode = "WALKING",
-                    originPlace = PlaceSearchResult(
+                    originPlace = PlaceSearchGateway.SearchHit(
                         externalPlaceId = "origin",
                         placeName = "Origin",
                         address = "addr1",
                         latitude = 0.0,
                         longitude = 0.0,
                     ),
-                    destinationPlace = PlaceSearchResult(
+                    destinationPlace = PlaceSearchGateway.SearchHit(
                         externalPlaceId = "dest",
                         placeName = "Destination",
                         address = "addr2",
@@ -162,11 +162,11 @@ class ItemControllerTest(
             .andExpect(jsonPath("$.data[0].originPlace.externalPlaceId", equalTo("origin")))
     }
 
-    private fun sampleItemView(
+    private fun sampleItem(
         visitDay: Int = 1,
         itemOrder: Int = 3,
         placeDetailSummary: PlaceDetailSummary? = null,
-    ) = ItemResult.ItemView(
+    ) = ItemResult.Item(
         itemId = 1L,
         tripId = 5L,
         visitDay = visitDay,

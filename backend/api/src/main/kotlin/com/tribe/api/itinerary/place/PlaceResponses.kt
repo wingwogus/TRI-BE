@@ -1,7 +1,7 @@
 package com.tribe.api.itinerary.place
 
-import com.tribe.application.itinerary.place.PlacePhotoHint
 import com.tribe.application.itinerary.place.PlaceDetailSummary
+import com.tribe.application.itinerary.place.PlaceResult
 import com.tribe.application.itinerary.place.PlaceTypeSummary
 
 object PlaceResponses {
@@ -24,7 +24,7 @@ object PlaceResponses {
         val photoUri: String? = null,
     ) {
         companion object {
-            fun from(hint: PlacePhotoHint) = PhotoHintResponse(
+            fun from(hint: PlaceResult.PhotoHint) = PhotoHintResponse(
                 name = hint.name,
                 photoUri = hint.photoUri,
             )
@@ -58,7 +58,22 @@ object PlaceResponses {
         val normalizedCategoryKey: String? = null,
         val photoHint: PhotoHintResponse? = null,
         val placeDetailSummary: PlaceDetailSummaryResponse? = null,
-    )
+    ) {
+        companion object {
+            fun from(result: PlaceResult.SearchItem) = SearchResponse(
+                placeId = result.placeId,
+                externalPlaceId = result.externalPlaceId,
+                placeName = result.placeName,
+                address = result.address,
+                latitude = result.latitude,
+                longitude = result.longitude,
+                placeTypeSummary = result.placeTypeSummary?.let(PlaceTypeSummaryResponse::from),
+                normalizedCategoryKey = result.normalizedCategoryKey?.name,
+                photoHint = result.photoHint?.let(PhotoHintResponse::from),
+                placeDetailSummary = result.placeDetailSummary?.let(PlaceDetailSummaryResponse::from),
+            )
+        }
+    }
 
     data class DetailResponse(
         val placeId: Long,
@@ -77,5 +92,26 @@ object PlaceResponses {
         val googleMapsUri: String?,
         val regularOpeningHoursJson: String?,
         val currentOpeningHoursJson: String?,
-    )
+    ) {
+        companion object {
+            fun from(view: PlaceResult.Detail) = DetailResponse(
+                placeId = view.placeId,
+                externalPlaceId = view.externalPlaceId,
+                placeName = view.placeName,
+                address = view.address,
+                latitude = view.latitude,
+                longitude = view.longitude,
+                placeTypeSummary = view.placeTypeSummary?.let(PlaceTypeSummaryResponse::from),
+                normalizedCategoryKey = view.normalizedCategoryKey?.name,
+                photoHint = view.photoHint?.let(PhotoHintResponse::from),
+                placeDetailSummary = view.placeDetailSummary?.let(PlaceDetailSummaryResponse::from),
+                formattedPhoneNumber = view.formattedPhoneNumber,
+                internationalPhoneNumber = view.internationalPhoneNumber,
+                websiteUri = view.websiteUri,
+                googleMapsUri = view.googleMapsUri,
+                regularOpeningHoursJson = view.regularOpeningHoursJson,
+                currentOpeningHoursJson = view.currentOpeningHoursJson,
+            )
+        }
+    }
 }
