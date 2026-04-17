@@ -1,44 +1,34 @@
 replicaCount: 2
-
 image:
   repository: docker.io/vantagac/tribe-api
   pullPolicy: IfNotPresent
-  tag: "1d3c5cdd89bb7bc5edb879e1abdc8553d759a502"
-
+  tag: "27b4817c2632bd40d354dc591168ab368ca7e4a3"
 imagePullSecrets:
-  - name: regcred
-
+- name: regcred
 nameOverride: ""
 fullnameOverride: ""
-
 serviceAccount:
   create: true
   automount: true
   annotations: {}
   name: ""
-
 podAnnotations: {}
 podLabels: {}
 podSecurityContext: {}
 securityContext: {}
-
 service:
   type: ClusterIP
   port: 80
   metricsPort: 9090
-
 containerPort: 8080
 managementPort: 9090
-
 env:
   SPRING_PROFILES_ACTIVE: prod
-
 envFrom:
-  - secretRef:
-      name: tribe-api-secret
-  - configMapRef:
-      name: tribe-api-config
-
+- secretRef:
+    name: tribe-api-secret
+- configMapRef:
+    name: tribe-api-config
 ingress:
   enabled: true
   className: nginx
@@ -48,18 +38,16 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
   hosts:
-    - host: api.tri-be.app
-      paths:
-        - path: /
-          pathType: Prefix
+  - host: api.tri-be.app
+    paths:
+    - path: /
+      pathType: Prefix
   tls: []
-
 serviceMonitor:
   enabled: true
   interval: 30s
   scrapeTimeout: 10s
   path: /actuator/prometheus
-
 livenessProbe:
   httpGet:
     path: /actuator/health/liveness
@@ -67,7 +55,6 @@ livenessProbe:
   initialDelaySeconds: 90
   periodSeconds: 10
   timeoutSeconds: 5
-
 readinessProbe:
   httpGet:
     path: /actuator/health/readiness
@@ -75,7 +62,6 @@ readinessProbe:
   initialDelaySeconds: 45
   periodSeconds: 5
   timeoutSeconds: 5
-
 startupProbe:
   httpGet:
     path: /actuator/health
@@ -83,7 +69,6 @@ startupProbe:
   failureThreshold: 60
   periodSeconds: 5
   timeoutSeconds: 5
-
 resources:
   requests:
     cpu: 250m
@@ -91,7 +76,6 @@ resources:
   limits:
     cpu: "1"
     memory: 1Gi
-
 volumes: []
 volumeMounts: []
 nodeSelector: {}
