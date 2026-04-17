@@ -59,7 +59,7 @@ class CommunityServiceTest {
             communityImageStorage,
         )
 
-        val result = service.listPosts(CommunityQuery.ListPosts())
+        val result = service.listPosts(CommunityCommand.ListPosts())
 
         assertEquals(1, result.size)
         assertEquals("title", result.first().title)
@@ -80,7 +80,7 @@ class CommunityServiceTest {
         )
 
         val exception = assertThrows(BusinessException::class.java) {
-            service.getPostDetail(CommunityQuery.GetPostDetail(999L))
+            service.getPostDetail(CommunityCommand.GetPostDetail(999L))
         }
 
         assertEquals(ErrorCode.RESOURCE_NOT_FOUND, exception.errorCode)
@@ -111,7 +111,7 @@ class CommunityServiceTest {
             communityImageStorage,
         )
 
-        val result = service.getPostDetail(CommunityQuery.GetPostDetail(1L))
+        val result = service.getPostDetail(CommunityCommand.GetPostDetail(1L))
 
         assertEquals("hello", result.title)
         assertEquals("tribe", result.authorNickname)
@@ -141,7 +141,7 @@ class CommunityServiceTest {
         )
 
         val result = service.createPost(
-            CommunityQuery.CreatePost(1L, "title", "content"),
+            CommunityCommand.CreatePost(1L, "title", "content"),
             file,
         )
 

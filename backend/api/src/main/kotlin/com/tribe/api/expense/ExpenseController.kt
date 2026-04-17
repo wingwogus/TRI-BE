@@ -32,7 +32,7 @@ class ExpenseController(
         @Valid @RequestPart("request") request: ExpenseRequests.CreateRequest,
         @RequestPart(value = "image", required = false) imageFile: MultipartFile?,
     ): ResponseEntity<ApiResponse<ExpenseResponses.ExpenseDetailResponse>> {
-        val result = expenseService.createExpense(request.toCreateCommand(tripId, imageFile))
+        val result = expenseService.createExpense(request.toCommand(tripId, imageFile))
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.ok(ExpenseResponses.ExpenseDetailResponse.from(result)))
     }
@@ -60,7 +60,7 @@ class ExpenseController(
         @PathVariable expenseId: Long,
         @Valid @RequestBody request: ExpenseRequests.UpdateRequest,
     ): ResponseEntity<ApiResponse<ExpenseResponses.ExpenseDetailResponse>> {
-        val result = expenseService.updateExpense(request.toUpdateCommand(tripId, expenseId))
+        val result = expenseService.updateExpense(request.toCommand(tripId, expenseId))
         return ResponseEntity.ok(ApiResponse.ok(ExpenseResponses.ExpenseDetailResponse.from(result)))
     }
 
@@ -70,18 +70,7 @@ class ExpenseController(
         @PathVariable expenseId: Long,
         @Valid @RequestBody request: ExpenseRequests.AssignParticipantsRequest,
     ): ResponseEntity<ApiResponse<ExpenseResponses.ExpenseDetailResponse>> {
-        val result = expenseService.assignParticipants(
-            ExpenseCommand.AssignParticipants(
-                tripId = tripId,
-                expenseId = expenseId,
-                items = request.items.map {
-                    ExpenseCommand.ItemAssignment(
-                        itemId = it.itemId,
-                        participantIds = it.participantIds,
-                    )
-                },
-            ),
-        )
+        val result = expenseService.assignParticipants(request.toCommand(tripId, expenseId))
         return ResponseEntity.ok(ApiResponse.ok(ExpenseResponses.ExpenseDetailResponse.from(result)))
     }
 
@@ -91,13 +80,7 @@ class ExpenseController(
         @PathVariable expenseId: Long,
         @Valid @RequestBody request: ExpenseRequests.ClearAssignmentsRequest,
     ): ResponseEntity<ApiResponse<ExpenseResponses.ExpenseDetailResponse>> {
-        val result = expenseService.clearAssignments(
-            ExpenseCommand.ClearAssignments(
-                tripId = tripId,
-                expenseId = expenseId,
-                itemIds = request.itemIds,
-            ),
-        )
+        val result = expenseService.clearAssignments(request.toCommand(tripId, expenseId))
         return ResponseEntity.ok(ApiResponse.ok(ExpenseResponses.ExpenseDetailResponse.from(result)))
     }
 
@@ -109,49 +92,4 @@ class ExpenseController(
         expenseService.deleteExpense(ExpenseCommand.Delete(tripId, expenseId))
         return ResponseEntity.ok(ApiResponse.empty(Unit))
     }
-
-    private fun ExpenseRequests.CreateRequest.toCreateCommand(tripId: Long, imageFile: MultipartFile?) = ExpenseCommand.Create(
-        tripId = tripId,
-        title = title,
-        amount = amount,
-        currencyCode = currencyCode,
-        spentAt = spentAt,
-        category = category,
-        splitType = splitType,
-        payerTripMemberId = payerTripMemberId,
-        itineraryItemId = itineraryItemId,
-        inputMethod = inputMethod,
-        note = note,
-        items = items.map {
-            ExpenseCommand.Item(
-                itemId = it.itemId,
-                itemName = it.itemName,
-                price = it.price,
-            )
-        },
-        receiptImageBytes = imageFile?.bytes,
-        receiptImageContentType = imageFile?.contentType,
-    )
-
-    private fun ExpenseRequests.UpdateRequest.toUpdateCommand(tripId: Long, expenseId: Long) = ExpenseCommand.Update(
-        tripId = tripId,
-        expenseId = expenseId,
-        title = title,
-        amount = amount,
-        currencyCode = currencyCode,
-        spentAt = spentAt,
-        category = category,
-        splitType = splitType,
-        payerTripMemberId = payerTripMemberId,
-        itineraryItemId = itineraryItemId,
-        inputMethod = inputMethod,
-        note = note,
-        items = items.map {
-            ExpenseCommand.Item(
-                itemId = it.itemId,
-                itemName = it.itemName,
-                price = it.price,
-            )
-        },
-    )
 }

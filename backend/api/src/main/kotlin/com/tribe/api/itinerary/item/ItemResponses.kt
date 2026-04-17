@@ -1,8 +1,8 @@
 package com.tribe.api.itinerary.item
 
-import com.tribe.application.itinerary.place.RouteDetails
 import com.tribe.application.itinerary.item.ItemResult
-import com.tribe.api.itinerary.place.PlaceRequests
+import com.tribe.application.itinerary.place.RouteDetails
+import com.tribe.api.itinerary.place.PlaceResponses
 import java.time.LocalDateTime
 
 object ItemResponses {
@@ -22,40 +22,48 @@ object ItemResponses {
 
     data class ItemResponse(
         val itemId: Long,
-        val categoryId: Long,
-        val categoryName: String,
         val tripId: Long,
-        val day: Int,
+        val visitDay: Int,
+        val itemOrder: Int,
         val placeId: Long?,
+        val externalPlaceId: String?,
         val name: String,
         val title: String?,
         val time: LocalDateTime?,
-        val order: Int,
         val memo: String?,
         val location: LocationResponse?,
+        val placeTypeSummary: PlaceResponses.PlaceTypeSummaryResponse?,
+        val normalizedCategoryKey: String?,
+        val photoHint: PlaceResponses.PhotoHintResponse?,
+        val placeDetailSummary: PlaceResponses.PlaceDetailSummaryResponse?,
+        val openingStatusWarning: String?,
     ) {
         companion object {
-            fun from(view: ItemResult.ItemView) = ItemResponse(
+            fun from(view: ItemResult.Item) = ItemResponse(
                 itemId = view.itemId,
-                categoryId = view.categoryId,
-                categoryName = view.categoryName,
                 tripId = view.tripId,
-                day = view.day,
+                visitDay = view.visitDay,
+                itemOrder = view.itemOrder,
                 placeId = view.placeId,
+                externalPlaceId = view.externalPlaceId,
                 name = view.name,
                 title = view.title,
                 time = view.time,
-                order = view.order,
                 memo = view.memo,
                 location = view.location?.let(LocationResponse::from),
+                placeTypeSummary = view.placeTypeSummary?.let(PlaceResponses.PlaceTypeSummaryResponse::from),
+                normalizedCategoryKey = view.normalizedCategoryKey?.name,
+                photoHint = view.photoHint?.let { PlaceResponses.PhotoHintResponse(it.name, it.photoUri) },
+                placeDetailSummary = view.placeDetailSummary?.let(PlaceResponses.PlaceDetailSummaryResponse::from),
+                openingStatusWarning = view.openingStatusWarning,
             )
         }
     }
 
     data class RouteDetailsResponse(
         val travelMode: String,
-        val originPlace: PlaceRequests.SearchResponse,
-        val destinationPlace: PlaceRequests.SearchResponse,
+        val originPlace: PlaceResponses.SearchResponse,
+        val destinationPlace: PlaceResponses.SearchResponse,
         val totalDuration: String,
         val totalDistance: String,
         val steps: List<RouteStepResponse>,
@@ -63,14 +71,14 @@ object ItemResponses {
         companion object {
             fun from(route: RouteDetails) = RouteDetailsResponse(
                 travelMode = route.travelMode,
-                originPlace = PlaceRequests.SearchResponse(
+                originPlace = PlaceResponses.SearchResponse(
                     externalPlaceId = route.originPlace.externalPlaceId,
                     placeName = route.originPlace.placeName,
                     address = route.originPlace.address,
                     latitude = route.originPlace.latitude,
                     longitude = route.originPlace.longitude,
                 ),
-                destinationPlace = PlaceRequests.SearchResponse(
+                destinationPlace = PlaceResponses.SearchResponse(
                     externalPlaceId = route.destinationPlace.externalPlaceId,
                     placeName = route.destinationPlace.placeName,
                     address = route.destinationPlace.address,

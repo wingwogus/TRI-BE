@@ -4,4 +4,5 @@ import org.springframework.data.jpa.repository.JpaRepository
 
 interface PlaceRepository : JpaRepository<Place, Long> {
     fun findByExternalPlaceId(externalPlaceId: String): Place?
+    fun findByExternalPlaceIdIn(externalPlaceIds: Collection<String>): List<Place>
 }

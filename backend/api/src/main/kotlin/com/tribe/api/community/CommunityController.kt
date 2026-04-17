@@ -1,7 +1,7 @@
 package com.tribe.api.community
 
 import com.tribe.api.common.ApiResponse
-import com.tribe.application.community.CommunityQuery
+import com.tribe.application.community.CommunityCommand
 import com.tribe.application.community.CommunityService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -30,10 +30,7 @@ class CommunityController(
         @Valid @RequestPart("request") request: CommunityRequests.CreatePostRequest,
         @RequestPart(value = "image", required = false) imageFile: MultipartFile?,
     ): ResponseEntity<ApiResponse<CommunityResponses.PostDetailResponse>> {
-        val post = communityService.createPost(
-            CommunityQuery.CreatePost(request.tripId, request.title, request.content),
-            imageFile,
-        )
+        val post = communityService.createPost(request.toCommand(), imageFile)
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.ok(CommunityResponses.PostDetailResponse.from(post)))
     }
@@ -42,14 +39,7 @@ class CommunityController(
     fun listPosts(
         @Valid @ModelAttribute request: CommunityRequests.ListPostsRequest
     ): ResponseEntity<ApiResponse<CommunityResponses.PostListResponse>> {
-        val posts = communityService.listPosts(
-            CommunityQuery.ListPosts(
-                page = request.page,
-                size = request.size,
-                country = request.country,
-                authorId = request.authorId,
-            )
-        )
+        val posts = communityService.listPosts(request.toCommand())
 
         return ResponseEntity.ok(ApiResponse.ok(CommunityResponses.PostListResponse.from(posts)))
     }
@@ -58,7 +48,7 @@ class CommunityController(
     fun getPostDetail(
         @PathVariable postId: Long
     ): ResponseEntity<ApiResponse<CommunityResponses.PostDetailResponse>> {
-        val post = communityService.getPostDetail(CommunityQuery.GetPostDetail(postId))
+        val post = communityService.getPostDetail(CommunityCommand.GetPostDetail(postId))
         return ResponseEntity.ok(ApiResponse.ok(CommunityResponses.PostDetailResponse.from(post)))
     }
 
@@ -68,10 +58,7 @@ class CommunityController(
         @Valid @RequestPart("request") request: CommunityRequests.UpdatePostRequest,
         @RequestPart(value = "image", required = false) imageFile: MultipartFile?,
     ): ResponseEntity<ApiResponse<CommunityResponses.PostDetailResponse>> {
-        val post = communityService.updatePost(
-            CommunityQuery.UpdatePost(postId, request.title, request.content),
-            imageFile,
-        )
+        val post = communityService.updatePost(request.toCommand(postId), imageFile)
         return ResponseEntity.ok(ApiResponse.ok(CommunityResponses.PostDetailResponse.from(post)))
     }
 
@@ -79,7 +66,7 @@ class CommunityController(
     fun deletePost(
         @PathVariable postId: Long,
     ): ResponseEntity<ApiResponse<Unit>> {
-        communityService.deletePost(CommunityQuery.DeletePost(postId))
+        communityService.deletePost(CommunityCommand.DeletePost(postId))
         return ResponseEntity.ok(ApiResponse.empty(Unit))
     }
 }

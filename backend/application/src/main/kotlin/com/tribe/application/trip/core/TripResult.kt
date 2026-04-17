@@ -34,7 +34,7 @@ object TripResult {
         val startDate: LocalDate,
         val endDate: LocalDate,
         val country: String,
-        val regionCode: String?,
+        val regionCode: String? = null,
         val memberCount: Int,
     ) {
         companion object {
@@ -58,7 +58,7 @@ object TripResult {
         val startDate: LocalDate,
         val endDate: LocalDate,
         val country: String,
-        val regionCode: String?,
+        val regionCode: String? = null,
         val members: List<MemberSummary>,
     ) {
         companion object {

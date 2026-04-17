@@ -1,22 +1,77 @@
 package com.tribe.application.itinerary.place
 
 interface PlaceSearchGateway {
-    fun search(query: String?, language: String, region: String?): List<PlaceSearchResult>
+    data class SearchHit(
+        val externalPlaceId: String,
+        val placeName: String,
+        val address: String,
+        val latitude: Double,
+        val longitude: Double,
+        val primaryType: String? = null,
+        val types: List<String> = emptyList(),
+    )
+
+    data class DetailsPayload(
+        val externalPlaceId: String,
+        val placeName: String,
+        val address: String,
+        val latitude: Double,
+        val longitude: Double,
+        val primaryType: String? = null,
+        val types: List<String> = emptyList(),
+        val businessStatus: String? = null,
+        val utcOffsetMinutes: Int? = null,
+        val formattedPhoneNumber: String? = null,
+        val internationalPhoneNumber: String? = null,
+        val websiteUri: String? = null,
+        val googleMapsUri: String? = null,
+        val rating: Double? = null,
+        val userRatingCount: Int? = null,
+        val priceLevel: Int? = null,
+        val regularOpeningHoursJson: String? = null,
+        val currentOpeningHoursJson: String? = null,
+        val primaryPhotoName: String? = null,
+        val editorialSummary: String? = null,
+        val regularOpeningPeriods: List<RegularOpeningPeriodInput> = emptyList(),
+    )
+
+    data class RegularOpeningPeriodInput(
+        val dayOfWeek: Int,
+        val openMinute: Int,
+        val closeMinute: Int,
+        val isOvernight: Boolean,
+        val sequenceNo: Int,
+    )
+
+    fun search(query: String?, language: String, context: PlaceSearchContext): List<SearchHit>
+    fun getPlaceDetails(externalPlaceId: String, language: String): DetailsPayload?
+    fun getPhoto(photoName: String, maxWidthPx: Int = 320): PlacePhotoMedia?
     fun directions(originPlaceId: String, destinationPlaceId: String, travelMode: String): RouteDetails?
 }
 
-data class PlaceSearchResult(
-    val externalPlaceId: String,
-    val placeName: String,
-    val address: String,
-    val latitude: Double,
-    val longitude: Double,
+data class PlacePhotoHint(
+    val name: String?,
+    val photoUri: String? = null,
+)
+
+data class PlacePhotoMedia(
+    val bytes: ByteArray? = null,
+    val contentType: String? = null,
+    val redirectUri: String? = null,
+)
+
+data class PlaceSearchContext(
+    val regionCode: String?,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val radiusMeters: Int? = null,
+    val regionContextKey: String? = null,
 )
 
 data class RouteDetails(
     val travelMode: String,
-    val originPlace: PlaceSearchResult,
-    val destinationPlace: PlaceSearchResult,
+    val originPlace: PlaceSearchGateway.SearchHit,
+    val destinationPlace: PlaceSearchGateway.SearchHit,
     val totalDuration: String,
     val totalDistance: String,
     val steps: List<RouteStep>,

@@ -25,25 +25,16 @@ class ItemController(
         @PathVariable tripId: Long,
         @RequestBody request: ItemRequests.CreateRequest,
     ): ResponseEntity<ApiResponse<ItemResponses.ItemResponse>> {
-        val result = itemService.createItem(
-            ItemCommand.Create(
-                tripId = tripId,
-                categoryId = request.categoryId,
-                placeId = request.placeId,
-                title = request.title,
-                time = request.time,
-                memo = request.memo,
-            ),
-        )
+        val result = itemService.createItem(request.toCommand(tripId))
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(ItemResponses.ItemResponse.from(result)))
     }
 
     @GetMapping
     fun getAllItems(
         @PathVariable tripId: Long,
-        @RequestParam(required = false) categoryId: Long?,
+        @RequestParam(required = false) visitDay: Int?,
     ): ResponseEntity<ApiResponse<List<ItemResponses.ItemResponse>>> {
-        val result = itemService.getAllItems(tripId, categoryId).map(ItemResponses.ItemResponse::from)
+        val result = itemService.getAllItems(tripId, visitDay).map(ItemResponses.ItemResponse::from)
         return ResponseEntity.ok(ApiResponse.ok(result))
     }
 
@@ -62,16 +53,7 @@ class ItemController(
         @PathVariable itemId: Long,
         @RequestBody request: ItemRequests.UpdateRequest,
     ): ResponseEntity<ApiResponse<ItemResponses.ItemResponse>> {
-        val result = itemService.updateItem(
-            ItemCommand.Update(
-                tripId = tripId,
-                itemId = itemId,
-                categoryId = request.categoryId,
-                title = request.title,
-                time = request.time,
-                memo = request.memo,
-            ),
-        )
+        val result = itemService.updateItem(request.toCommand(tripId, itemId))
         return ResponseEntity.ok(ApiResponse.ok(ItemResponses.ItemResponse.from(result)))
     }
 
@@ -89,18 +71,7 @@ class ItemController(
         @PathVariable tripId: Long,
         @RequestBody request: ItemRequests.OrderUpdateRequest,
     ): ResponseEntity<ApiResponse<List<ItemResponses.ItemResponse>>> {
-        val result = itemService.updateItemOrder(
-            ItemCommand.OrderUpdate(
-                tripId = tripId,
-                items = request.items.map {
-                    ItemCommand.OrderItem(
-                        itemId = it.itemId,
-                        categoryId = it.categoryId,
-                        order = it.order,
-                    )
-                },
-            ),
-        )
+        val result = itemService.updateItemOrder(request.toCommand(tripId))
         return ResponseEntity.ok(ApiResponse.ok(result.map(ItemResponses.ItemResponse::from)))
     }
 

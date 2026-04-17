@@ -1,7 +1,6 @@
 package com.tribe.api.community
 
-import com.tribe.application.community.CommunityPostDetail
-import com.tribe.application.community.CommunityPostSummary
+import com.tribe.application.community.CommunityResult
 import java.time.LocalDateTime
 
 object CommunityResponses {
@@ -9,7 +8,7 @@ object CommunityResponses {
         val posts: List<PostSummaryResponse>
     ) {
         companion object {
-            fun from(posts: List<CommunityPostSummary>): PostListResponse {
+            fun from(posts: List<CommunityResult.PostSummary>): PostListResponse {
                 return PostListResponse(posts.map(PostSummaryResponse::from))
             }
         }
@@ -26,7 +25,7 @@ object CommunityResponses {
         val updatedAt: LocalDateTime?,
     ) {
         companion object {
-            fun from(post: CommunityPostSummary): PostSummaryResponse {
+            fun from(post: CommunityResult.PostSummary): PostSummaryResponse {
                 return PostSummaryResponse(
                     id = post.id,
                     title = post.title,
@@ -53,7 +52,7 @@ object CommunityResponses {
         val updatedAt: LocalDateTime?,
     ) {
         companion object {
-            fun from(post: CommunityPostDetail): PostDetailResponse {
+            fun from(post: CommunityResult.PostDetail): PostDetailResponse {
                 return PostDetailResponse(
                     id = post.id,
                     title = post.title,

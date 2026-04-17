@@ -1,6 +1,6 @@
 package com.tribe.application.community
 
-object CommunityQuery {
+object CommunityCommand {
     data class CreatePost(
         val tripId: Long,
         val title: String,
@@ -15,7 +15,7 @@ object CommunityQuery {
     )
 
     data class GetPostDetail(
-        val postId: Long
+        val postId: Long,
     )
 
     data class UpdatePost(

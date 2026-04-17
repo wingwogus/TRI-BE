@@ -26,7 +26,7 @@ class ChatController(
         @PathVariable tripId: Long,
         @RequestBody request: ChatMessageRequests.SendRequest,
     ): ResponseEntity<ApiResponse<ChatMessageResponses.MessageResponse>> {
-        val message = chatMessageService.send(ChatMessageCommand.Send(tripId, request.content))
+        val message = chatMessageService.send(request.toCommand(tripId))
         return ResponseEntity.ok(ApiResponse.ok(ChatMessageResponses.MessageResponse.from(message)))
     }
 

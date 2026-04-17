@@ -1,5 +1,6 @@
 package com.tribe.api.itinerary.wishlist
 
+import com.tribe.api.itinerary.place.PlaceResponses
 import com.tribe.application.itinerary.wishlist.WishlistResult
 import java.math.BigDecimal
 
@@ -21,6 +22,10 @@ object WishlistResponses {
         val address: String?,
         val latitude: BigDecimal,
         val longitude: BigDecimal,
+        val placeTypeSummary: PlaceResponses.PlaceTypeSummaryResponse?,
+        val normalizedCategoryKey: String?,
+        val photoHint: PlaceResponses.PhotoHintResponse?,
+        val placeDetailSummary: PlaceResponses.PlaceDetailSummaryResponse?,
         val adder: AdderResponse,
     ) {
         companion object {
@@ -31,6 +36,10 @@ object WishlistResponses {
                 item.address,
                 item.latitude,
                 item.longitude,
+                item.placeTypeSummary?.let(PlaceResponses.PlaceTypeSummaryResponse::from),
+                item.normalizedCategoryKey?.name,
+                item.photoHint?.let { PlaceResponses.PhotoHintResponse(it.name, it.photoUri) },
+                item.placeDetailSummary?.let(PlaceResponses.PlaceDetailSummaryResponse::from),
                 AdderResponse.from(item.adder),
             )
         }

@@ -27,7 +27,7 @@ class MemberController(
     fun updateNickname(
         @Valid @RequestBody request: MemberRequests.UpdateNicknameRequest,
     ): ResponseEntity<ApiResponse<MemberResponses.ProfileResponse>> {
-        val profile = memberService.updateNickname(MemberCommand.UpdateNickname(request.nickname))
+        val profile = memberService.updateNickname(request.toCommand())
         return ResponseEntity.ok(ApiResponse.ok(MemberResponses.ProfileResponse.from(profile)))
     }
 

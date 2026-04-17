@@ -3,12 +3,11 @@ package com.tribe.application.trip.review
 import com.tribe.application.trip.ai.GeminiGateway
 import com.tribe.application.exception.ErrorCode
 import com.tribe.application.exception.business.BusinessException
-import com.tribe.application.itinerary.place.PlaceSearchResult
+import com.tribe.application.itinerary.place.PlaceCatalogService
+import com.tribe.application.itinerary.place.PlaceResult
 import com.tribe.application.itinerary.place.PlaceSearchService
-import com.tribe.domain.itinerary.category.Category
 import com.tribe.domain.itinerary.item.ItineraryItem
 import com.tribe.domain.itinerary.place.Place
-import com.tribe.domain.itinerary.place.PlaceRepository
 import com.tribe.domain.trip.review.RecommendedPlaceRepository
 import com.tribe.domain.trip.core.Country
 import com.tribe.domain.trip.core.Trip
@@ -37,7 +36,7 @@ class TripReviewServiceTest {
     @Mock private lateinit var tripReviewRepository: TripReviewRepository
     @Mock private lateinit var geminiGateway: GeminiGateway
     @Mock private lateinit var placeSearchService: PlaceSearchService
-    @Mock private lateinit var placeRepository: PlaceRepository
+    @Mock private lateinit var placeCatalogService: PlaceCatalogService
     @Mock private lateinit var recommendedPlaceRepository: RecommendedPlaceRepository
 
     private lateinit var service: TripReviewService
@@ -49,7 +48,7 @@ class TripReviewServiceTest {
             tripReviewRepository = tripReviewRepository,
             geminiGateway = geminiGateway,
             placeSearchService = placeSearchService,
-            placeRepository = placeRepository,
+            placeCatalogService = placeCatalogService,
             recommendedPlaceRepository = recommendedPlaceRepository,
         )
     }
@@ -63,10 +62,37 @@ class TripReviewServiceTest {
         doReturn("## 피드백\n---추천 장소 목록---\n오사카 성")
             .`when`(geminiGateway)
             .generate(org.mockito.ArgumentMatchers.anyString())
-        `when`(placeSearchService.search("오사카 성", "ko", trip.country.code)).thenReturn(
-            listOf(PlaceSearchResult("place1", "오사카 성", "오사카", 1.0, 10.0)),
+        `when`(
+            placeSearchService.search(
+                "오사카 성",
+                "ko",
+                trip.country.code,
+                34.6937,
+                135.5023,
+                50_000,
+                "region:JP_OSAKA_KYOTO",
+            ),
+        ).thenReturn(
+            listOf(
+                PlaceResult.SearchItem(
+                    externalPlaceId = "place1",
+                    placeName = "오사카 성",
+                    address = "오사카",
+                    latitude = 1.0,
+                    longitude = 10.0,
+                ),
+            ),
         )
-        `when`(placeRepository.findByExternalPlaceId("place1")).thenReturn(place)
+        doReturn(place)
+            .`when`(placeCatalogService)
+            .getOrCreateAndEnrich(
+                "place1",
+                "오사카 성",
+                "오사카",
+                BigDecimal.valueOf(1.0),
+                BigDecimal.valueOf(10.0),
+                "ko",
+            )
         doAnswer { invocation ->
             val saved = invocation.arguments[0] as TripReview
             ReflectionTestUtils.setField(saved, "id", 11L)
@@ -110,12 +136,10 @@ class TripReviewServiceTest {
     }
 
     private fun tripFixture(): Trip {
-        val trip = Trip("테스트 여행", LocalDate.now(), LocalDate.now().plusDays(5), Country.JAPAN)
+        val trip = Trip("테스트 여행", LocalDate.now(), LocalDate.now().plusDays(5), Country.JAPAN, "JP_OSAKA_KYOTO")
         ReflectionTestUtils.setField(trip, "id", 5L)
-        val category = Category(trip, 1, "Day 1", 1)
         val place = Place("seed", "도톤보리", "오사카", BigDecimal.ZERO, BigDecimal.ZERO)
-        category.itineraryItems.add(ItineraryItem(category, place, null, null, 1, null))
-        trip.categories.add(category)
+        trip.itineraryItems.add(ItineraryItem(trip, 1, place, null, null, 1, null))
         return trip
     }
 }

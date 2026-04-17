@@ -1,12 +1,13 @@
 package com.tribe.application.trip.core
 
 import com.tribe.application.redis.TripInvitationRepository
+import com.tribe.application.exception.ErrorCode
+import com.tribe.application.exception.business.BusinessException
 import com.tribe.application.security.CurrentActor
 import com.tribe.application.trip.event.TripRealtimeEventPublisher
 import com.tribe.application.trip.member.TripMemberIntegrityService
 import com.tribe.domain.community.CommunityPost
 import com.tribe.domain.community.CommunityPostRepository
-import com.tribe.domain.itinerary.category.Category
 import com.tribe.domain.itinerary.item.ItineraryItem
 import com.tribe.domain.member.Member
 import com.tribe.domain.member.MemberRepository
@@ -30,7 +31,6 @@ import org.mockito.junit.jupiter.MockitoExtension
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
 import java.time.LocalDate
-import java.util.Optional
 
 @ExtendWith(MockitoExtension::class)
 class TripServiceTest {
@@ -80,6 +80,20 @@ class TripServiceTest {
     }
 
     @Test
+    fun `createTrip saves matching region code`() {
+        val member = Member(id = 1L, email = "user@example.com", passwordHash = "hashed", nickname = "tribe")
+        `when`(currentActor.requireUserId()).thenReturn(1L)
+        `when`(memberRepository.findById(1L)).thenReturn(java.util.Optional.of(member))
+        `when`(tripRepository.save(any(Trip::class.java))).thenAnswer { it.arguments[0] as Trip }
+
+        val result = tripService.createTrip(
+            TripCommand.Create("Trip", LocalDate.now(), LocalDate.now().plusDays(1), Country.JAPAN.code, TripRegion.JP_TOKYO.code),
+        )
+
+        assertEquals(TripRegion.JP_TOKYO.code, result.regionCode)
+    }
+
+    @Test
     fun `createTrip keeps compatibility when regionCode is missing`() {
         val member = Member(id = 1L, email = "user@example.com", passwordHash = "hashed", nickname = "tribe")
         `when`(currentActor.requireUserId()).thenReturn(1L)
@@ -99,13 +113,26 @@ class TripServiceTest {
         `when`(currentActor.requireUserId()).thenReturn(1L)
         `when`(memberRepository.findById(1L)).thenReturn(java.util.Optional.of(member))
 
-        val ex = assertThrows(com.tribe.application.exception.business.BusinessException::class.java) {
+        val ex = assertThrows(BusinessException::class.java) {
             tripService.createTrip(
                 TripCommand.Create("Trip", LocalDate.now(), LocalDate.now().plusDays(1), Country.JAPAN.code, TripRegion.KR_JEJU.code),
             )
         }
 
-        assertEquals(com.tribe.application.exception.ErrorCode.INVALID_INPUT, ex.errorCode)
+        assertEquals(ErrorCode.INVALID_INPUT, ex.errorCode)
+    }
+
+    @Test
+    fun `updateTrip clears region code when blank is requested`() {
+        val trip = Trip("Trip", LocalDate.now(), LocalDate.now().plusDays(1), Country.JAPAN, TripRegion.JP_TOKYO.code)
+        `when`(tripRepository.findTripWithMembersById(5L)).thenReturn(trip)
+
+        val result = tripService.updateTrip(
+            TripCommand.Update(5L, "Trip", trip.startDate, trip.endDate, Country.JAPAN.code, ""),
+        )
+
+        assertEquals(null, result.regionCode)
+        assertEquals(null, trip.regionCode)
     }
 
     @Test
@@ -143,10 +170,8 @@ class TripServiceTest {
     fun `importTrip clones categories and itinerary items`() {
         val member = Member(id = 1L, email = "user@example.com", passwordHash = "hashed", nickname = "tribe")
         val originalTrip = Trip("Original", LocalDate.now(), LocalDate.now().plusDays(1), Country.JAPAN, TripRegion.JP_TOKYO.code)
-        val category = Category(originalTrip, 1, "Day1", 1)
-        val item = ItineraryItem(category, null, "Dinner", null, 1, "memo")
-        category.itineraryItems.add(item)
-        originalTrip.categories.add(category)
+        val item = ItineraryItem(originalTrip, 1, null, "Dinner", null, 1, "memo")
+        originalTrip.itineraryItems.add(item)
         val post = CommunityPost(member, originalTrip, "Post", "Content", null)
 
         `when`(currentActor.requireUserId()).thenReturn(1L)

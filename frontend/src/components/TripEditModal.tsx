@@ -6,7 +6,7 @@ import {Label} from "@/components/ui/label";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {Country, TripDetail, UpdateTripRequest} from "@/api/trips";
 import {useToast} from "@/hooks/use-toast";
-import {getCountryOptionByCode2, getTripRegionsByCountryCode, TRIP_COUNTRY_OPTIONS} from "@/lib/tripRegions";
+import { getCountryOptionByCode, getCountryOptionByCode2, getTripRegionsByCountryCode, TRIP_COUNTRY_OPTIONS } from "@/lib/tripRegions";
 
 interface TripEditModalProps {
   isOpen: boolean;
@@ -23,8 +23,8 @@ export const TripEditModal = ({ isOpen, onClose, trip, onUpdateTrip }: TripEditM
   const [startDate, setStartDate] = useState(trip.startDate);
   const [endDate, setEndDate] = useState(trip.endDate);
   const [country, setCountry] = useState<string>('');
-  const [regionCode, setRegionCode] = useState("");
-  const selectedCountryOption = TRIP_COUNTRY_OPTIONS.find((option) => option.code === country);
+  const [selectedRegionCode, setSelectedRegionCode] = useState("");
+  const selectedCountryOption = getCountryOptionByCode(country);
   const availableRegions = getTripRegionsByCountryCode(selectedCountryOption?.code2);
 
   useEffect(() => {
@@ -36,13 +36,13 @@ export const TripEditModal = ({ isOpen, onClose, trip, onUpdateTrip }: TripEditM
       if (countryOption) {
         setCountry(countryOption.code);
       }
-      setRegionCode(trip.regionCode ?? NO_REGION_VALUE);
+      setSelectedRegionCode(trip.regionCode ?? NO_REGION_VALUE);
     }
   }, [trip]);
 
   const handleCountryChange = (value: string) => {
     setCountry(value);
-    setRegionCode("");
+    setSelectedRegionCode(NO_REGION_VALUE);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -115,7 +115,7 @@ export const TripEditModal = ({ isOpen, onClose, trip, onUpdateTrip }: TripEditM
       startDate,
       endDate,
       country: country as Country,
-      regionCode: regionCode === NO_REGION_VALUE ? "" : regionCode || null,
+      regionCode: selectedRegionCode === NO_REGION_VALUE ? "" : selectedRegionCode || null,
     });
     onClose();
   };
@@ -157,12 +157,12 @@ export const TripEditModal = ({ isOpen, onClose, trip, onUpdateTrip }: TripEditM
           {availableRegions.length > 0 && (
             <div className="space-y-2">
               <Label htmlFor="regionCode">여행 권역</Label>
-              <Select value={regionCode} onValueChange={setRegionCode}>
+              <Select value={selectedRegionCode} onValueChange={setSelectedRegionCode}>
                 <SelectTrigger>
                   <SelectValue placeholder="권역을 선택하세요" />
                 </SelectTrigger>
                 <SelectContent className="bg-background z-50 max-h-[260px]">
-                  <SelectItem value={NO_REGION_VALUE}>권역 없음</SelectItem>
+                  <SelectItem value={NO_REGION_VALUE}>선택 안 함</SelectItem>
                   {availableRegions.map((region) => (
                     <SelectItem key={region.code} value={region.code}>
                       {region.label}
