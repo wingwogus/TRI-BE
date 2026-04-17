@@ -1,7 +1,7 @@
 package com.tribe.domain.trip.core
 
 import com.tribe.domain.chat.ChatMessage
-import com.tribe.domain.itinerary.category.Category
+import com.tribe.domain.itinerary.item.ItineraryItem
 import com.tribe.domain.itinerary.wishlist.WishlistItem
 import com.tribe.domain.member.Member
 import com.tribe.domain.trip.member.TripMember
@@ -30,6 +30,8 @@ class Trip(
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     var country: Country,
+    @Column(name = "region_code")
+    var regionCode: String? = null,
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -40,7 +42,7 @@ class Trip(
     val members: MutableList<TripMember> = mutableListOf()
 
     @OneToMany(mappedBy = "trip", cascade = [CascadeType.ALL], orphanRemoval = true)
-    val categories: MutableList<Category> = mutableListOf()
+    val itineraryItems: MutableList<ItineraryItem> = mutableListOf()
 
     @OneToMany(mappedBy = "trip", cascade = [CascadeType.ALL], orphanRemoval = true)
     val wishlistItems: MutableList<WishlistItem> = mutableListOf()
@@ -51,11 +53,12 @@ class Trip(
     @OneToMany(mappedBy = "trip", cascade = [CascadeType.ALL], orphanRemoval = true)
     val reviews: MutableList<TripReview> = mutableListOf()
 
-    fun update(title: String, startDate: LocalDate, endDate: LocalDate, country: Country) {
+    fun update(title: String, startDate: LocalDate, endDate: LocalDate, country: Country, regionCode: String?) {
         this.title = title
         this.startDate = startDate
         this.endDate = endDate
         this.country = country
+        this.regionCode = regionCode
     }
 
     fun addMember(member: Member, role: TripRole): TripMember {

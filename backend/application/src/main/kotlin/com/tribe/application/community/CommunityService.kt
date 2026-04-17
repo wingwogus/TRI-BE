@@ -25,11 +25,11 @@ class CommunityService(
     private val tripAuthorizationPolicy: TripAuthorizationPolicy,
     private val communityImageStorage: CommunityImageStorage,
 ) {
-    fun createPost(query: CommunityQuery.CreatePost, imageFile: MultipartFile?): CommunityPostDetail {
-        tripAuthorizationPolicy.isTripAdmin(query.tripId)
+    fun createPost(command: CommunityCommand.CreatePost, imageFile: MultipartFile?): CommunityResult.PostDetail {
+        tripAuthorizationPolicy.isTripAdmin(command.tripId)
         val author = memberRepository.findById(currentActor.requireUserId())
             .orElseThrow { BusinessException(ErrorCode.USER_NOT_FOUND) }
-        val trip = tripRepository.findById(query.tripId)
+        val trip = tripRepository.findById(command.tripId)
             .orElseThrow { BusinessException(ErrorCode.TRIP_NOT_FOUND) }
 
         val imageUrl = if (imageFile != null && !imageFile.isEmpty) {
@@ -40,8 +40,8 @@ class CommunityService(
             CommunityPost(
                 author = author,
                 trip = trip,
-                title = query.title,
-                content = query.content,
+                title = command.title,
+                content = command.content,
                 representativeImageUrl = imageUrl,
             )
         )
@@ -49,15 +49,15 @@ class CommunityService(
         return post.toDetail()
     }
 
-    fun listPosts(query: CommunityQuery.ListPosts): List<CommunityPostSummary> {
+    fun listPosts(command: CommunityCommand.ListPosts): List<CommunityResult.PostSummary> {
         val pageable = PageRequest.of(
-            query.page.coerceAtLeast(0),
-            query.size.coerceIn(1, 100),
+            command.page.coerceAtLeast(0),
+            command.size.coerceIn(1, 100),
             Sort.by(Sort.Direction.DESC, "createdAt")
         )
 
-        val posts = if (query.country != null || query.authorId != null) {
-            communityPostRepository.searchPost(PostSearchCondition(query.country, query.authorId), pageable)
+        val posts = if (command.country != null || command.authorId != null) {
+            communityPostRepository.searchPost(PostSearchCondition(command.country, command.authorId), pageable)
         } else {
             communityPostRepository.findAll(pageable)
         }
@@ -67,16 +67,16 @@ class CommunityService(
             .map { it.toSummary() }
     }
 
-    fun getPostDetail(query: CommunityQuery.GetPostDetail): CommunityPostDetail {
-        val post = communityPostRepository.findById(query.postId)
+    fun getPostDetail(command: CommunityCommand.GetPostDetail): CommunityResult.PostDetail {
+        val post = communityPostRepository.findById(command.postId)
             .orElseThrow {
                 BusinessException(
                     errorCode = ErrorCode.RESOURCE_NOT_FOUND,
-                    detail = mapOf("postId" to query.postId)
+                    detail = mapOf("postId" to command.postId)
                 )
             }
 
-        return CommunityPostDetail(
+        return CommunityResult.PostDetail(
             id = post.id,
             title = post.title,
             content = post.content,
@@ -89,13 +89,13 @@ class CommunityService(
         )
     }
 
-    fun updatePost(query: CommunityQuery.UpdatePost, imageFile: MultipartFile?): CommunityPostDetail {
-        val post = communityPostRepository.findByIdWithDetails(query.postId)
+    fun updatePost(command: CommunityCommand.UpdatePost, imageFile: MultipartFile?): CommunityResult.PostDetail {
+        val post = communityPostRepository.findByIdWithDetails(command.postId)
             ?: throw BusinessException(ErrorCode.POST_NOT_FOUND)
         tripAuthorizationPolicy.isTripOwner(post.trip.id)
 
-        post.title = query.title
-        post.content = query.content
+        post.title = command.title
+        post.content = command.content
 
         if (imageFile != null && !imageFile.isEmpty) {
             val oldImageUrl = post.representativeImageUrl
@@ -108,8 +108,8 @@ class CommunityService(
         return post.toDetail()
     }
 
-    fun deletePost(query: CommunityQuery.DeletePost) {
-        val post = communityPostRepository.findByIdWithDetails(query.postId)
+    fun deletePost(command: CommunityCommand.DeletePost) {
+        val post = communityPostRepository.findByIdWithDetails(command.postId)
             ?: throw BusinessException(ErrorCode.POST_NOT_FOUND)
         tripAuthorizationPolicy.isTripOwner(post.trip.id)
         val oldImageUrl = post.representativeImageUrl
@@ -119,8 +119,8 @@ class CommunityService(
         }
     }
 
-    private fun CommunityPost.toSummary(): CommunityPostSummary {
-        return CommunityPostSummary(
+    private fun CommunityPost.toSummary(): CommunityResult.PostSummary {
+        return CommunityResult.PostSummary(
             id = id,
             title = title,
             authorId = author.id,
@@ -132,8 +132,8 @@ class CommunityService(
         )
     }
 
-    private fun CommunityPost.toDetail(): CommunityPostDetail {
-        return CommunityPostDetail(
+    private fun CommunityPost.toDetail(): CommunityResult.PostDetail {
+        return CommunityResult.PostDetail(
             id = id,
             title = title,
             content = content,

@@ -4,7 +4,8 @@ import com.tribe.api.exception.GlobalExceptionHandler
 import com.tribe.application.itinerary.item.ItemCommand
 import com.tribe.application.itinerary.item.ItemResult
 import com.tribe.application.itinerary.item.ItemService
-import com.tribe.application.itinerary.place.PlaceSearchResult
+import com.tribe.application.itinerary.place.PlaceDetailSummary
+import com.tribe.application.itinerary.place.PlaceSearchGateway
 import com.tribe.application.itinerary.place.RouteDetails
 import com.tribe.application.security.TokenProvider
 import org.hamcrest.Matchers.equalTo
@@ -39,13 +40,13 @@ class ItemControllerTest(
             itemService.createItem(
                 ItemCommand.Create(
                     tripId = 5L,
-                    categoryId = 11L,
+                    visitDay = 1,
                     title = "Dinner",
                     time = LocalDateTime.of(2026, 4, 12, 19, 0),
                     memo = "Booked",
                 ),
             ),
-        ).thenReturn(sampleItemView())
+        ).thenReturn(sampleItem())
 
         mockMvc.perform(
             post("/api/v1/trips/5/items")
@@ -53,7 +54,7 @@ class ItemControllerTest(
                 .content(
                     """
                     {
-                      "categoryId": 11,
+                      "visitDay": 1,
                       "title": "Dinner",
                       "time": "2026-04-12T19:00:00",
                       "memo": "Booked"
@@ -64,12 +65,12 @@ class ItemControllerTest(
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.itemId", equalTo(1)))
-            .andExpect(jsonPath("$.data.categoryId", equalTo(11)))
+            .andExpect(jsonPath("$.data.visitDay", equalTo(1)))
     }
 
     @Test
     fun `getAllItems returns collection`() {
-        `when`(itemService.getAllItems(5L, null)).thenReturn(listOf(sampleItemView()))
+        `when`(itemService.getAllItems(5L, null)).thenReturn(listOf(sampleItem()))
 
         mockMvc.perform(get("/api/v1/trips/5/items"))
             .andExpect(status().isOk)
@@ -79,24 +80,53 @@ class ItemControllerTest(
     }
 
     @Test
+    fun `getAllItems keeps place detail summary response shape`() {
+        `when`(itemService.getAllItems(5L, null)).thenReturn(
+            listOf(
+                sampleItem(
+                    placeDetailSummary = PlaceDetailSummary(
+                        businessStatus = "OPERATIONAL",
+                        rating = 4.7,
+                        userRatingCount = 128,
+                        editorialSummary = "Popular place",
+                    ),
+                ),
+            ),
+        )
+
+        mockMvc.perform(get("/api/v1/trips/5/items"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data[0].placeDetailSummary.businessStatus", equalTo("OPERATIONAL")))
+            .andExpect(jsonPath("$.data[0].placeDetailSummary.rating", equalTo(4.7)))
+            .andExpect(jsonPath("$.data[0].placeDetailSummary.userRatingCount", equalTo(128)))
+            .andExpect(jsonPath("$.data[0].placeDetailSummary.editorialSummary", equalTo("Popular place")))
+    }
+
+    @Test
     fun `updateItemOrder returns reordered items`() {
         `when`(
             itemService.updateItemOrder(
                 ItemCommand.OrderUpdate(
                     tripId = 5L,
-                    items = listOf(ItemCommand.OrderItem(1L, 12L, 2)),
+                    items = listOf(
+                        ItemCommand.OrderItem(
+                            itemId = 1L,
+                            visitDay = 2,
+                            itemOrder = 2,
+                        ),
+                    ),
                 ),
             ),
-        ).thenReturn(listOf(sampleItemView(categoryId = 12L, order = 2)))
+        ).thenReturn(listOf(sampleItem(visitDay = 2, itemOrder = 2)))
 
         mockMvc.perform(
             patch("/api/v1/trips/5/items/order")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"items":[{"itemId":1,"categoryId":12,"order":2}]}"""),
+                .content("""{"items":[{"itemId":1,"visitDay":2,"itemOrder":2}]}"""),
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.data[0].categoryId", equalTo(12)))
-            .andExpect(jsonPath("$.data[0].order", equalTo(2)))
+            .andExpect(jsonPath("$.data[0].visitDay", equalTo(2)))
+            .andExpect(jsonPath("$.data[0].itemOrder", equalTo(2)))
     }
 
     @Test
@@ -105,8 +135,20 @@ class ItemControllerTest(
             listOf(
                 RouteDetails(
                     travelMode = "WALKING",
-                    originPlace = PlaceSearchResult("origin", "Origin", "addr1", 0.0, 0.0),
-                    destinationPlace = PlaceSearchResult("dest", "Destination", "addr2", 1.0, 1.0),
+                    originPlace = PlaceSearchGateway.SearchHit(
+                        externalPlaceId = "origin",
+                        placeName = "Origin",
+                        address = "addr1",
+                        latitude = 0.0,
+                        longitude = 0.0,
+                    ),
+                    destinationPlace = PlaceSearchGateway.SearchHit(
+                        externalPlaceId = "dest",
+                        placeName = "Destination",
+                        address = "addr2",
+                        latitude = 1.0,
+                        longitude = 1.0,
+                    ),
                     totalDuration = "10 mins",
                     totalDistance = "1 km",
                     steps = emptyList(),
@@ -120,21 +162,26 @@ class ItemControllerTest(
             .andExpect(jsonPath("$.data[0].originPlace.externalPlaceId", equalTo("origin")))
     }
 
-    private fun sampleItemView(
-        categoryId: Long = 11L,
-        order: Int = 3,
-    ) = ItemResult.ItemView(
+    private fun sampleItem(
+        visitDay: Int = 1,
+        itemOrder: Int = 3,
+        placeDetailSummary: PlaceDetailSummary? = null,
+    ) = ItemResult.Item(
         itemId = 1L,
-        categoryId = categoryId,
-        categoryName = "Meals",
         tripId = 5L,
-        day = 1,
+        visitDay = visitDay,
+        itemOrder = itemOrder,
         placeId = null,
+        externalPlaceId = null,
         name = "Dinner",
         title = "Dinner",
         time = LocalDateTime.of(2026, 4, 12, 19, 0),
-        order = order,
         memo = "Booked",
         location = null,
+        placeTypeSummary = null,
+        normalizedCategoryKey = null,
+        photoHint = null,
+        placeDetailSummary = placeDetailSummary,
+        openingStatusWarning = null,
     )
 }

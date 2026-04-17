@@ -33,7 +33,7 @@ class AuthController(
     fun sendVerificationCode(
         @Valid @RequestBody request: AuthRequests.SendVerificationCodeRequest
     ): ResponseEntity<ApiResponse<Unit>> {
-        authService.sendVerificationCode(AuthCommand.SendVerificationCode(request.email))
+        authService.sendVerificationCode(request.toCommand())
         return ResponseEntity.ok(ApiResponse.empty(Unit))
     }
 
@@ -41,7 +41,7 @@ class AuthController(
     fun verifyEmailCode(
         @Valid @RequestBody request: AuthRequests.VerifyEmailCodeRequest
     ): ResponseEntity<ApiResponse<Unit>> {
-        authService.verifyEmailCode(AuthCommand.VerifyEmailCode(request.email, request.code))
+        authService.verifyEmailCode(request.toCommand())
         return ResponseEntity.ok(ApiResponse.empty(Unit))
     }
 
@@ -49,14 +49,7 @@ class AuthController(
     fun signUp(
         @Valid @RequestBody request: AuthRequests.SignUpRequest
     ): ResponseEntity<ApiResponse<Unit>> {
-        authService.signUp(
-            AuthCommand.SignUp(
-                email = request.email,
-                password = request.password,
-                nickname = request.nickname,
-                avatar = request.avatar
-            )
-        )
+        authService.signUp(request.toCommand())
         return ResponseEntity
             .status(HttpStatus.CREATED)
             .body(ApiResponse.empty(Unit))
@@ -66,7 +59,7 @@ class AuthController(
     fun login(
         @Valid @RequestBody request: AuthRequests.LoginRequest
     ): ResponseEntity<ApiResponse<AuthResponses.TokenResponse>> {
-        val result = authService.login(AuthCommand.Login(request.email, request.password))
+        val result = authService.login(request.toCommand())
         return ResponseEntity.ok()
             .header(HttpHeaders.SET_COOKIE, refreshTokenCookie(result.refreshToken).toString())
             .body(ApiResponse.ok(AuthResponses.TokenResponse.from(result)))
@@ -76,7 +69,7 @@ class AuthController(
     fun checkNickname(
         @Valid @RequestBody request: AuthRequests.CheckNicknameRequest
     ): ResponseEntity<ApiResponse<Unit>> {
-        authService.checkNickname(AuthCommand.CheckNickname(request.nickname))
+        authService.checkNickname(request.toCommand())
         return ResponseEntity.ok(ApiResponse.empty(Unit))
     }
 

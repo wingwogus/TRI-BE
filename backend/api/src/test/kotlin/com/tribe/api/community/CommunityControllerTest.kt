@@ -1,9 +1,8 @@
 package com.tribe.api.community
 
 import com.tribe.api.exception.GlobalExceptionHandler
-import com.tribe.application.community.CommunityPostDetail
-import com.tribe.application.community.CommunityPostSummary
-import com.tribe.application.community.CommunityQuery
+import com.tribe.application.community.CommunityCommand
+import com.tribe.application.community.CommunityResult
 import com.tribe.application.community.CommunityService
 import com.tribe.application.security.TokenProvider
 import org.hamcrest.Matchers.equalTo
@@ -43,11 +42,11 @@ class CommunityControllerTest(
 
         `when`(
             communityService.createPost(
-                CommunityQuery.CreatePost(1L, "title", "content"),
+                CommunityCommand.CreatePost(1L, "title", "content"),
                 null
             )
         ).thenReturn(
-            CommunityPostDetail(
+            CommunityResult.PostDetail(
                 id = 1L,
                 title = "title",
                 content = "content",
@@ -73,10 +72,10 @@ class CommunityControllerTest(
     fun `listPosts returns summarized posts`() {
         val now = LocalDateTime.of(2026, 4, 12, 12, 0)
 
-        `when`(communityService.listPosts(CommunityQuery.ListPosts(page = 0, size = 20)))
+        `when`(communityService.listPosts(CommunityCommand.ListPosts(page = 0, size = 20)))
             .thenReturn(
                 listOf(
-                    CommunityPostSummary(
+                    CommunityResult.PostSummary(
                         id = 1L,
                         title = "question",
                         authorId = 2L,
@@ -100,9 +99,9 @@ class CommunityControllerTest(
     fun `getPostDetail returns post with comments`() {
         val now = LocalDateTime.of(2026, 4, 12, 12, 0)
 
-        `when`(communityService.getPostDetail(CommunityQuery.GetPostDetail(10L)))
+        `when`(communityService.getPostDetail(CommunityCommand.GetPostDetail(10L)))
             .thenReturn(
-                CommunityPostDetail(
+                CommunityResult.PostDetail(
                     id = 10L,
                     title = "review",
                     content = "content",

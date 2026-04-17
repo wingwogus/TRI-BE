@@ -4,12 +4,11 @@ import com.tribe.application.trip.ai.GeminiGateway
 import com.tribe.application.exception.ErrorCode
 import com.tribe.application.exception.business.BusinessException
 import com.tribe.application.itinerary.place.PlaceSearchService
-import com.tribe.domain.itinerary.place.Place
-import com.tribe.domain.itinerary.place.PlaceRepository
 import com.tribe.domain.trip.review.RecommendedPlace
 import com.tribe.domain.trip.review.RecommendedPlaceRepository
 import com.tribe.domain.trip.review.TripReview
 import com.tribe.domain.trip.review.TripReviewRepository
+import com.tribe.domain.trip.core.TripRegion
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -26,7 +25,7 @@ class TripReviewService(
     private val tripReviewRepository: TripReviewRepository,
     private val geminiGateway: GeminiGateway,
     private val placeSearchService: PlaceSearchService,
-    private val placeRepository: PlaceRepository,
+    private val placeCatalogService: com.tribe.application.itinerary.place.PlaceCatalogService,
     private val recommendedPlaceRepository: RecommendedPlaceRepository,
 ) {
     @PreAuthorize("@tripAuthorizationPolicy.isTripMember(#tripId)")
@@ -39,7 +38,7 @@ class TripReviewService(
 
         val (reviewContent, placePart) = splitAiResponse(aiFeedback)
         val review = tripReviewRepository.save(TripReview(trip, command.concept, reviewContent))
-        parseAndRetrievePlaces(placePart, trip.country.code).forEach {
+        parseAndRetrievePlaces(placePart, trip.country.code, TripRegion.from(trip.regionCode)).forEach {
             recommendedPlaceRepository.save(RecommendedPlace.from(it, review))
         }
         return TripReviewResult.ReviewDetail.from(review)
@@ -60,22 +59,42 @@ class TripReviewService(
         return TripReviewResult.ReviewDetail.from(review)
     }
 
-    private fun parseAndRetrievePlaces(placesPart: String, countryCode: String): List<Place> {
+    private fun parseAndRetrievePlaces(
+        placesPart: String,
+        countryCode: String,
+        region: TripRegion?,
+    ): List<com.tribe.domain.itinerary.place.Place> {
         val placeNames = placesPart.lines().map { it.trim() }.filter { it.isNotEmpty() }
         return placeNames.mapNotNull { placeName ->
-            placeSearchService.search(placeName, "ko", countryCode).firstOrNull()?.let { searchResult ->
-                placeRepository.findByExternalPlaceId(searchResult.externalPlaceId)
-                    ?: placeRepository.save(
-                        Place(
-                            searchResult.externalPlaceId,
-                            searchResult.placeName,
-                            searchResult.address,
-                            BigDecimal.valueOf(searchResult.latitude),
-                            BigDecimal.valueOf(searchResult.longitude),
-                        )
-                    )
+            placeSearchService.search(
+                query = buildRegionAwareQuery(placeName, region),
+                language = "ko",
+                region = countryCode,
+                latitude = region?.centerLat,
+                longitude = region?.centerLng,
+                radiusMeters = if (region != null) 50_000 else null,
+                regionContextKey = region?.code?.let { "region:$it" },
+            ).firstOrNull()?.let { searchResult ->
+                placeCatalogService.getOrCreateAndEnrich(
+                    externalPlaceId = searchResult.externalPlaceId,
+                    placeName = searchResult.placeName,
+                    address = searchResult.address,
+                    latitude = BigDecimal.valueOf(searchResult.latitude),
+                    longitude = BigDecimal.valueOf(searchResult.longitude),
+                )
             }
         }
+    }
+
+    private fun buildRegionAwareQuery(placeName: String, region: TripRegion?): String {
+        if (region == null) {
+            return placeName
+        }
+        val loweredPlaceName = placeName.lowercase()
+        val hasHint = listOf(region.label, *region.searchHints.toTypedArray()).any { hint ->
+            loweredPlaceName.contains(hint.lowercase())
+        }
+        return if (hasHint) placeName else "${region.label} $placeName"
     }
 
     private fun splitAiResponse(content: String): Pair<String, String> {
@@ -85,17 +104,14 @@ class TripReviewService(
     }
 
     private fun createPromptFromTrip(trip: com.tribe.domain.trip.core.Trip, concept: String?): String {
-        val itineraryText = trip.categories
-            .groupBy { it.day }
+        val itineraryText = trip.itineraryItems
+            .groupBy { it.visitDay }
             .toSortedMap()
-            .map { (day, categories) ->
+            .map { (day, items) ->
                 buildString {
                     appendLine("- Day $day")
-                    categories.forEach { category ->
-                        appendLine("  - 카테고리: ${category.name}")
-                        category.itineraryItems.forEach { item ->
-                            appendLine("    - 이름: ${item.place?.name ?: item.title}, 주소: ${item.place?.address}")
-                        }
+                    items.sortedBy { it.order }.forEach { item ->
+                        appendLine("  - 이름: ${item.place?.name ?: item.title}, 주소: ${item.place?.address}")
                     }
                 }
             }

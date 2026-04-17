@@ -1,9 +1,18 @@
 package com.tribe.application.trip.review
 
+import com.tribe.application.itinerary.place.PlaceDetailSummary
+import com.tribe.application.itinerary.place.PlaceResultAssembler
+import com.tribe.application.itinerary.place.PlaceTypeSummary
+import com.tribe.application.itinerary.place.NormalizedPlaceCategoryKey
 import com.tribe.domain.trip.review.TripReview
 import java.time.LocalDateTime
 
 object TripReviewResult {
+    data class PhotoHint(
+        val name: String?,
+        val photoUri: String?,
+    )
+
     data class ReviewDetail(
         val reviewId: Long,
         val concept: String?,
@@ -13,12 +22,14 @@ object TripReviewResult {
     ) {
         companion object {
             fun from(review: TripReview): ReviewDetail {
+                val assembler = PlaceResultAssembler()
                 return ReviewDetail(
                     reviewId = review.id,
                     concept = review.concept,
                     content = review.content,
                     createdAt = review.createdAt,
                     recommendedPlaces = review.recommendedPlaces.map {
+                        val placeTypeSummary = assembler.toPlaceTypeSummary(it.place)
                         RecommendedPlaceResult(
                             placeId = it.place.id,
                             externalPlaceId = it.place.externalPlaceId,
@@ -26,6 +37,10 @@ object TripReviewResult {
                             address = it.place.address,
                             latitude = it.place.latitude.toDouble(),
                             longitude = it.place.longitude.toDouble(),
+                            placeTypeSummary = placeTypeSummary,
+                            normalizedCategoryKey = PlaceResultAssembler.toNormalizedCategoryKey(placeTypeSummary),
+                            photoHint = null,
+                            placeDetailSummary = assembler.toDetailSummary(it.place),
                         )
                     },
                 )
@@ -64,5 +79,9 @@ object TripReviewResult {
         val address: String?,
         val latitude: Double,
         val longitude: Double,
+        val placeTypeSummary: PlaceTypeSummary?,
+        val normalizedCategoryKey: NormalizedPlaceCategoryKey?,
+        val photoHint: PhotoHint?,
+        val placeDetailSummary: PlaceDetailSummary?,
     )
 }

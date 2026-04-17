@@ -27,9 +27,7 @@ class TripController(
     fun createTrip(
         @Valid @RequestBody request: TripRequests.CreateRequest,
     ): ResponseEntity<ApiResponse<TripResponses.TripDetailResponse>> {
-        val result = tripService.createTrip(
-            TripCommand.Create(request.title, request.startDate, request.endDate, request.country),
-        )
+        val result = tripService.createTrip(request.toCommand())
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.ok(TripResponses.TripDetailResponse.from(result)))
     }
@@ -53,9 +51,7 @@ class TripController(
         @PathVariable tripId: Long,
         @Valid @RequestBody request: TripRequests.UpdateRequest,
     ): ResponseEntity<ApiResponse<TripResponses.TripDetailResponse>> {
-        val result = tripService.updateTrip(
-            TripCommand.Update(tripId, request.title, request.startDate, request.endDate, request.country),
-        )
+        val result = tripService.updateTrip(request.toCommand(tripId))
         return ResponseEntity.ok(ApiResponse.ok(TripResponses.TripDetailResponse.from(result)))
     }
 
@@ -75,7 +71,7 @@ class TripController(
     fun joinTrip(
         @Valid @RequestBody request: TripRequests.JoinRequest,
     ): ResponseEntity<ApiResponse<TripResponses.TripDetailResponse>> {
-        val result = tripService.joinTrip(TripCommand.Join(request.token))
+        val result = tripService.joinTrip(request.toCommand())
         return ResponseEntity.ok(ApiResponse.ok(TripResponses.TripDetailResponse.from(result)))
     }
 
@@ -83,9 +79,7 @@ class TripController(
     fun importTrip(
         @Valid @RequestBody request: TripRequests.ImportRequest,
     ): ResponseEntity<ApiResponse<TripResponses.TripDetailResponse>> {
-        val result = tripService.importTrip(
-            TripCommand.Import(request.postId, request.title, request.startDate, request.endDate),
-        )
+        val result = tripService.importTrip(request.toCommand())
         return ResponseEntity.ok(ApiResponse.ok(TripResponses.TripDetailResponse.from(result)))
     }
 
@@ -94,7 +88,7 @@ class TripController(
         @PathVariable tripId: Long,
         @Valid @RequestBody request: TripRequests.AddGuestRequest,
     ): ResponseEntity<ApiResponse<TripResponses.TripDetailResponse>> {
-        val result = tripService.addGuest(TripCommand.AddGuest(tripId, request.nickname))
+        val result = tripService.addGuest(request.toCommand(tripId))
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.ok(TripResponses.TripDetailResponse.from(result)))
     }
@@ -129,7 +123,7 @@ class TripController(
         @PathVariable memberId: Long,
         @Valid @RequestBody request: TripRequests.AssignRoleRequest,
     ): ResponseEntity<ApiResponse<TripResponses.TripDetailResponse>> {
-        val result = tripService.assignRole(TripCommand.AssignRole(tripId, memberId, request.role))
+        val result = tripService.assignRole(request.toCommand(tripId, memberId))
         return ResponseEntity.ok(ApiResponse.ok(TripResponses.TripDetailResponse.from(result)))
     }
 }

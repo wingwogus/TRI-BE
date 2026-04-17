@@ -1,41 +1,59 @@
 package com.tribe.application.itinerary.item
 
+import com.tribe.application.itinerary.place.NormalizedPlaceCategoryKey
+import com.tribe.application.itinerary.place.PlaceDetailSummary
+import com.tribe.application.itinerary.place.PlaceResultAssembler
+import com.tribe.application.itinerary.place.PlaceTypeSummary
 import com.tribe.domain.itinerary.item.ItineraryItem
 import java.time.LocalDateTime
 
 object ItemResult {
+    data class PhotoHint(
+        val name: String?,
+        val photoUri: String? = null,
+    )
+
     data class LocationInfo(
         val lat: Double,
         val lng: Double,
         val address: String?,
     )
 
-    data class ItemView(
+    data class Item(
         val itemId: Long,
-        val categoryId: Long,
-        val categoryName: String,
         val tripId: Long,
-        val day: Int,
+        val visitDay: Int,
+        val itemOrder: Int,
         val placeId: Long?,
+        val externalPlaceId: String?,
         val name: String,
         val title: String?,
         val time: LocalDateTime?,
-        val order: Int,
         val memo: String?,
         val location: LocationInfo?,
+        val placeTypeSummary: PlaceTypeSummary?,
+        val normalizedCategoryKey: NormalizedPlaceCategoryKey?,
+        val photoHint: PhotoHint?,
+        val placeDetailSummary: PlaceDetailSummary?,
+        val openingStatusWarning: String?,
     ) {
         companion object {
-            fun from(item: ItineraryItem) = ItemView(
+            fun from(
+                item: ItineraryItem,
+                placeTypeSummary: PlaceTypeSummary? = null,
+                photoHint: PhotoHint? = null,
+                placeDetailSummary: PlaceDetailSummary? = null,
+                openingStatusWarning: String? = null,
+            ) = Item(
                 itemId = item.id,
-                categoryId = item.category.id,
-                categoryName = item.category.name,
-                tripId = item.category.trip.id,
-                day = item.category.day,
+                tripId = item.trip.id,
+                visitDay = item.visitDay,
+                itemOrder = item.order,
                 placeId = item.place?.id,
+                externalPlaceId = item.place?.externalPlaceId,
                 name = item.place?.name ?: item.title ?: "",
                 title = item.title,
                 time = item.time,
-                order = item.order,
                 memo = item.memo,
                 location = item.place?.let {
                     LocationInfo(
@@ -44,6 +62,11 @@ object ItemResult {
                         address = it.address,
                     )
                 },
+                placeTypeSummary = placeTypeSummary,
+                normalizedCategoryKey = PlaceResultAssembler.toNormalizedCategoryKey(placeTypeSummary),
+                photoHint = photoHint,
+                placeDetailSummary = placeDetailSummary,
+                openingStatusWarning = openingStatusWarning,
             )
         }
     }

@@ -1,23 +1,58 @@
-import {useEffect, useState} from "react";
+import {useCallback, useEffect, useState} from "react";
 import {Loader2, Plus, Search} from "lucide-react";
 import {Dialog, DialogContent, DialogHeader, DialogTitle,} from "@/components/ui/dialog";
 import {Input} from "@/components/ui/input";
 import {Button} from "@/components/ui/button";
 import {placesApi, PlaceSearchResult} from "@/api/places";
+import {Badge} from "@/components/ui/badge";
 import {useToast} from "@/hooks/use-toast";
+import {buildPlaceSearchQuery, getCountryOptionByCode2, getTripRegionByCode, getTripRegionLabel} from "@/lib/tripRegions";
+import {getPlacePhotoUrl, getPlaceTypeLabel} from "@/lib/placePresentation";
+import {readApiErrorMessage} from "@/api/http";
 
 interface PlaceSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddPlace: (place: PlaceSearchResult) => void;
-  region?: string;
+  countryCode?: string;
+  regionCode?: string | null;
 }
 
-export const PlaceSearchModal = ({ isOpen, onClose, onAddPlace, region }: PlaceSearchModalProps) => {
+export const PlaceSearchModal = ({ isOpen, onClose, onAddPlace, countryCode, regionCode }: PlaceSearchModalProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [places, setPlaces] = useState<PlaceSearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const region = getTripRegionByCode(regionCode);
+  const regionLabel = getTripRegionLabel(regionCode);
+  const resolvedCountryCode = getCountryOptionByCode2(countryCode)?.code2;
+  const searchPlaces = useCallback(async () => {
+    if (!searchQuery.trim()) return;
+    
+    setIsLoading(true);
+    try {
+      const [latitude, longitude] = region
+        ? [region.centerLat, region.centerLng]
+        : [undefined, undefined];
+      const results = await placesApi.searchPlaces(
+        buildPlaceSearchQuery(searchQuery, regionCode),
+        resolvedCountryCode,
+        latitude,
+        longitude,
+        50000,
+        region ? `region:${region.code}` : resolvedCountryCode ? `country:${resolvedCountryCode}` : undefined,
+      );
+      setPlaces(results);
+    } catch (error) {
+      toast({
+        title: "검색 실패",
+        description: readApiErrorMessage(error, "장소 검색 중 오류가 발생했습니다."),
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [region, regionCode, resolvedCountryCode, searchQuery, toast]);
 
   useEffect(() => {
     if (searchQuery.trim()) {
@@ -28,25 +63,7 @@ export const PlaceSearchModal = ({ isOpen, onClose, onAddPlace, region }: PlaceS
     } else {
       setPlaces([]);
     }
-  }, [searchQuery]);
-
-  const searchPlaces = async () => {
-    if (!searchQuery.trim()) return;
-    
-    setIsLoading(true);
-    try {
-      const results = await placesApi.searchPlaces(searchQuery, region);
-      setPlaces(results);
-    } catch (error) {
-      toast({
-        title: "검색 실패",
-        description: "장소 검색 중 오류가 발생했습니다.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [searchPlaces, searchQuery]);
 
   const handleAddPlace = (place: PlaceSearchResult) => {
     onAddPlace(place);
@@ -70,7 +87,7 @@ export const PlaceSearchModal = ({ isOpen, onClose, onAddPlace, region }: PlaceS
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="장소명이나 카테고리를 검색하세요..."
+              placeholder={regionLabel ? `${regionLabel} 근처 장소를 검색하세요...` : "장소명이나 카테고리를 검색하세요..."}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -91,11 +108,35 @@ export const PlaceSearchModal = ({ isOpen, onClose, onAddPlace, region }: PlaceS
                 key={place.externalPlaceId}
                 className="p-4 bg-gradient-subtle rounded-lg border hover:shadow-soft transition-all duration-200"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h5 className="font-medium text-foreground mb-2">{place.placeName}</h5>
-                    <div className="text-sm text-muted-foreground">
-                      <p>{place.address}</p>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-1 gap-4 min-w-0">
+                    {getPlacePhotoUrl(place.photoHint) && (
+                      <img
+                        src={getPlacePhotoUrl(place.photoHint) || undefined}
+                        alt={place.placeName}
+                        className="h-16 w-16 rounded-lg object-cover border shrink-0"
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <h5 className="font-medium text-foreground mb-2 truncate">{place.placeName}</h5>
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        {getPlaceTypeLabel(place.placeTypeSummary, place.normalizedCategoryKey) && (
+                          <Badge variant="secondary" className="font-medium">
+                            {getPlaceTypeLabel(place.placeTypeSummary, place.normalizedCategoryKey)}
+                          </Badge>
+                        )}
+                        {typeof place.placeDetailSummary?.rating === "number" && (
+                          <Badge variant="outline" className="font-medium">
+                            평점 {place.placeDetailSummary.rating.toFixed(1)}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        <p className="line-clamp-2">{place.address}</p>
+                        {place.placeDetailSummary?.editorialSummary && (
+                          <p className="line-clamp-2 mt-1">{place.placeDetailSummary.editorialSummary}</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <Button

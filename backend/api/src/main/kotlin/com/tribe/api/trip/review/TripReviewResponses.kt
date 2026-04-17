@@ -1,5 +1,6 @@
 package com.tribe.api.trip.review
 
+import com.tribe.api.itinerary.place.PlaceResponses
 import com.tribe.application.trip.review.TripReviewResult
 import java.time.LocalDateTime
 
@@ -11,6 +12,10 @@ object TripReviewResponses {
         val address: String?,
         val latitude: Double,
         val longitude: Double,
+        val placeTypeSummary: PlaceResponses.PlaceTypeSummaryResponse?,
+        val normalizedCategoryKey: String?,
+        val photoHint: PlaceResponses.PhotoHintResponse?,
+        val placeDetailSummary: PlaceResponses.PlaceDetailSummaryResponse?,
     )
 
     data class ReviewDetailResponse(
@@ -34,6 +39,10 @@ object TripReviewResponses {
                         address = it.address,
                         latitude = it.latitude,
                         longitude = it.longitude,
+                        placeTypeSummary = it.placeTypeSummary?.let(PlaceResponses.PlaceTypeSummaryResponse::from),
+                        normalizedCategoryKey = it.normalizedCategoryKey?.name,
+                        photoHint = it.photoHint?.let { hint -> PlaceResponses.PhotoHintResponse(hint.name, hint.photoUri) },
+                        placeDetailSummary = it.placeDetailSummary?.let(PlaceResponses.PlaceDetailSummaryResponse::from),
                     )
                 },
             )

@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.math.BigDecimal
@@ -37,8 +38,9 @@ class ExpenseControllerTest(
 
     @Test
     fun `createExpense returns created payload`() {
-        `when`(
-            expenseService.createExpense(
+        doReturn(sampleExpenseDetail())
+            .`when`(expenseService)
+            .createExpense(
                 ExpenseCommand.Create(
                     tripId = 5L,
                     title = "Dinner",
@@ -58,8 +60,7 @@ class ExpenseControllerTest(
                     receiptImageBytes = null,
                     receiptImageContentType = null,
                 ),
-            ),
-        ).thenReturn(sampleExpenseDetail())
+            )
 
         val requestPart = MockMultipartFile(
             "request",
@@ -142,6 +143,55 @@ class ExpenseControllerTest(
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.items[0].participants[0].tripMemberId", equalTo(11)))
+    }
+
+    @Test
+    fun `updateExpense maps request body to update command`() {
+        `when`(
+            expenseService.updateExpense(
+                ExpenseCommand.Update(
+                    tripId = 5L,
+                    expenseId = 3L,
+                    title = "Lunch",
+                    amount = BigDecimal("42.50"),
+                    currencyCode = "JPY",
+                    spentAt = LocalDate.of(2026, 4, 13),
+                    category = "FOOD",
+                    splitType = "CUSTOM",
+                    payerTripMemberId = 12L,
+                    itineraryItemId = 8L,
+                    inputMethod = "HANDWRITE",
+                    note = "Updated",
+                    items = listOf(
+                        ExpenseCommand.Item(itemId = 9L, itemName = "Ramen", price = BigDecimal("42.50")),
+                    ),
+                ),
+            ),
+        ).thenReturn(sampleExpenseDetail())
+
+        mockMvc.perform(
+            patch("/api/v1/trips/5/expenses/3")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "title": "Lunch",
+                      "amount": 42.50,
+                      "currencyCode": "JPY",
+                      "spentAt": "2026-04-13",
+                      "category": "FOOD",
+                      "splitType": "CUSTOM",
+                      "payerTripMemberId": 12,
+                      "itineraryItemId": 8,
+                      "inputMethod": "HANDWRITE",
+                      "note": "Updated",
+                      "items": [{"itemId":9,"itemName":"Ramen","price":42.50}]
+                    }
+                    """.trimIndent(),
+                ),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.success").value(true))
     }
 
     @Test

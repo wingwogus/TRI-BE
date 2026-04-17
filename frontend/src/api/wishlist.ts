@@ -1,4 +1,5 @@
 import { authenticatedAxios, type ApiResponse } from "@/api/http";
+import type { NormalizedPlaceCategoryKey, PlaceDetailSummary, PlacePhotoHint, PlaceTypeSummary } from "@/api/placeMetadata";
 
 export interface TripMemberDetails {
   memberId: number | null;
@@ -14,6 +15,10 @@ export interface WishlistItem {
   address: string | null;
   latitude: number;
   longitude: number;
+  placeTypeSummary?: PlaceTypeSummary | null;
+  normalizedCategoryKey?: NormalizedPlaceCategoryKey | null;
+  photoHint?: PlacePhotoHint | null;
+  placeDetailSummary?: PlaceDetailSummary | null;
   adder: TripMemberDetails;
 }
 
@@ -47,6 +52,10 @@ interface BackendWishlistItem {
   address: string | null;
   latitude: number;
   longitude: number;
+  placeTypeSummary?: PlaceTypeSummary | null;
+  normalizedCategoryKey?: NormalizedPlaceCategoryKey | null;
+  photoHint?: PlacePhotoHint | null;
+  placeDetailSummary?: PlaceDetailSummary | null;
   adder: BackendAdder;
 }
 
@@ -57,6 +66,10 @@ const toWishlistItem = (item: BackendWishlistItem): WishlistItem => ({
   address: item.address,
   latitude: Number(item.latitude),
   longitude: Number(item.longitude),
+  placeTypeSummary: item.placeTypeSummary ?? null,
+  normalizedCategoryKey: item.normalizedCategoryKey ?? null,
+  photoHint: item.photoHint ?? null,
+  placeDetailSummary: item.placeDetailSummary ?? null,
   adder: {
     memberId: item.adder.memberId,
     nickname: item.adder.nickname,

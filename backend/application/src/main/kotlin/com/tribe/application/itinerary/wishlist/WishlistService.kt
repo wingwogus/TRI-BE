@@ -9,8 +9,6 @@ import com.tribe.application.trip.event.TripRealtimeEventType
 import com.tribe.application.trip.event.WishlistAction
 import com.tribe.application.trip.event.WishlistEvent
 import com.tribe.application.trip.core.TripAuthorizationPolicy
-import com.tribe.domain.itinerary.place.Place
-import com.tribe.domain.itinerary.place.PlaceRepository
 import com.tribe.domain.itinerary.wishlist.WishlistItem
 import com.tribe.domain.itinerary.wishlist.WishlistItemRepository
 import com.tribe.domain.member.MemberRepository
@@ -24,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional
 class WishlistService(
     private val wishlistItemRepository: WishlistItemRepository,
-    private val placeRepository: PlaceRepository,
+    private val placeCatalogService: com.tribe.application.itinerary.place.PlaceCatalogService,
     private val tripMemberRepository: TripMemberRepository,
     private val tripRepository: TripRepository,
     private val memberRepository: MemberRepository,
@@ -44,16 +42,13 @@ class WishlistService(
             throw BusinessException(ErrorCode.WISHLIST_ITEM_ALREADY_EXISTS)
         }
 
-        val place = placeRepository.findByExternalPlaceId(command.externalPlaceId)
-            ?: placeRepository.save(
-                Place(
-                    externalPlaceId = command.externalPlaceId,
-                    name = command.placeName,
-                    address = command.address,
-                    latitude = command.latitude,
-                    longitude = command.longitude,
-                )
-            )
+        val place = placeCatalogService.getOrCreateAndEnrich(
+            externalPlaceId = command.externalPlaceId,
+            placeName = command.placeName,
+            address = command.address,
+            latitude = command.latitude,
+            longitude = command.longitude,
+        )
 
         val saved = wishlistItemRepository.save(
             WishlistItem(
