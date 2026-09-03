@@ -25,6 +25,20 @@ class GeminiWebClientGatewayTest {
     }
 
     @Test
+    fun `buildJsonRequestBody adds structured output config`() {
+        val schema = mapOf("type" to "object", "required" to listOf("title"))
+
+        val body = gateway.buildJsonRequestBody("hello", schema)
+
+        val generationConfig = body["generationConfig"] as Map<*, *>
+        val responseFormat = generationConfig["responseFormat"] as Map<*, *>
+        val text = responseFormat["text"] as Map<*, *>
+
+        assertEquals("application/json", text["mimeType"])
+        assertEquals(schema, text["schema"])
+    }
+
+    @Test
     fun `extractResponseText returns first text part`() {
         val response = mapOf(
             "candidates" to listOf(

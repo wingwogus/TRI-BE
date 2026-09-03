@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
 
 @Component
-@ConditionalOnProperty(name = ["tribe.trip.review.enabled"], havingValue = "true", matchIfMissing = true)
 @ConditionalOnProperty(name = ["trip.review.ai.provider"], havingValue = "gemini", matchIfMissing = true)
 class GeminiWebClientGateway(
     webClientBuilder: WebClient.Builder,
@@ -17,9 +16,17 @@ class GeminiWebClientGateway(
     private val webClient = webClientBuilder.build()
 
     override fun generate(prompt: String): String? {
+        return execute(buildRequestBody(prompt))
+    }
+
+    override fun generateJson(prompt: String, schema: Map<String, Any>): String? {
+        return execute(buildJsonRequestBody(prompt, schema))
+    }
+
+    private fun execute(requestBody: Map<String, Any>): String? {
         val response = webClient.post()
             .uri("$apiUrl?key=$apiKey")
-            .bodyValue(buildRequestBody(prompt))
+            .bodyValue(requestBody)
             .retrieve()
             .bodyToMono(Map::class.java)
             .block()
@@ -37,6 +44,21 @@ class GeminiWebClientGateway(
                     )
                 )
             )
+        )
+    }
+
+    internal fun buildJsonRequestBody(prompt: String, schema: Map<String, Any>): Map<String, Any> {
+        return buildRequestBody(prompt) + mapOf(
+            "generationConfig" to mapOf(
+                "temperature" to 0.4,
+                "maxOutputTokens" to 8192,
+                "responseFormat" to mapOf(
+                    "text" to mapOf(
+                        "mimeType" to "application/json",
+                        "schema" to schema,
+                    ),
+                ),
+            ),
         )
     }
 

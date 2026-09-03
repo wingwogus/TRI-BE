@@ -66,6 +66,8 @@ object ItemResponses {
         val destinationPlace: PlaceResponses.SearchResponse,
         val totalDuration: String,
         val totalDistance: String,
+        val totalDurationSeconds: Long?,
+        val totalDistanceMeters: Long?,
         val steps: List<RouteStepResponse>,
     ) {
         companion object {
@@ -87,6 +89,8 @@ object ItemResponses {
                 ),
                 totalDuration = route.totalDuration,
                 totalDistance = route.totalDistance,
+                totalDurationSeconds = route.totalDurationSeconds,
+                totalDistanceMeters = route.totalDistanceMeters,
                 steps = route.steps.map(RouteStepResponse::from),
             )
         }

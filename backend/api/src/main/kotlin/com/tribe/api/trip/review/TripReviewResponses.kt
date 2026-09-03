@@ -24,6 +24,7 @@ object TripReviewResponses {
         val content: String?,
         val createdAt: LocalDateTime?,
         val recommendedPlaces: List<RecommendedPlaceResponse>,
+        val routeOptimization: RouteOptimizationResponse?,
     ) {
         companion object {
             fun from(result: TripReviewResult.ReviewDetail) = ReviewDetailResponse(
@@ -45,6 +46,85 @@ object TripReviewResponses {
                         placeDetailSummary = it.placeDetailSummary?.let(PlaceResponses.PlaceDetailSummaryResponse::from),
                     )
                 },
+                routeOptimization = result.routeOptimization?.let(RouteOptimizationResponse::from),
+            )
+        }
+    }
+
+    data class RouteOptimizationResponse(
+        val days: List<RouteOptimizationDayResponse>,
+    ) {
+        companion object {
+            fun from(result: TripReviewResult.RouteOptimizationResult) = RouteOptimizationResponse(
+                days = result.days.map(RouteOptimizationDayResponse::from),
+            )
+        }
+    }
+
+    data class RouteOptimizationDayResponse(
+        val visitDay: Int,
+        val currentOrder: List<RouteOptimizationItemResponse>,
+        val optimizedOrder: List<RouteOptimizationItemResponse>,
+        val currentDurationSeconds: Long?,
+        val optimizedDurationSeconds: Long?,
+        val savedDurationSeconds: Long?,
+        val currentLegs: List<RouteOptimizationLegResponse>,
+        val optimizedLegs: List<RouteOptimizationLegResponse>,
+        val warnings: List<String>,
+    ) {
+        companion object {
+            fun from(result: TripReviewResult.RouteOptimizationDay) = RouteOptimizationDayResponse(
+                visitDay = result.visitDay,
+                currentOrder = result.currentOrder.map(RouteOptimizationItemResponse::from),
+                optimizedOrder = result.optimizedOrder.map(RouteOptimizationItemResponse::from),
+                currentDurationSeconds = result.currentDurationSeconds,
+                optimizedDurationSeconds = result.optimizedDurationSeconds,
+                savedDurationSeconds = result.savedDurationSeconds,
+                currentLegs = result.currentLegs.map(RouteOptimizationLegResponse::from),
+                optimizedLegs = result.optimizedLegs.map(RouteOptimizationLegResponse::from),
+                warnings = result.warnings,
+            )
+        }
+    }
+
+    data class RouteOptimizationItemResponse(
+        val itemId: Long,
+        val itemOrder: Int,
+        val name: String,
+        val placeId: Long?,
+        val externalPlaceId: String?,
+    ) {
+        companion object {
+            fun from(result: TripReviewResult.RouteOptimizationItem) = RouteOptimizationItemResponse(
+                itemId = result.itemId,
+                itemOrder = result.itemOrder,
+                name = result.name,
+                placeId = result.placeId,
+                externalPlaceId = result.externalPlaceId,
+            )
+        }
+    }
+
+    data class RouteOptimizationLegResponse(
+        val originItemId: Long,
+        val destinationItemId: Long,
+        val originName: String,
+        val destinationName: String,
+        val durationText: String?,
+        val durationSeconds: Long?,
+        val distanceText: String?,
+        val distanceMeters: Long?,
+    ) {
+        companion object {
+            fun from(result: TripReviewResult.RouteOptimizationLeg) = RouteOptimizationLegResponse(
+                originItemId = result.originItemId,
+                destinationItemId = result.destinationItemId,
+                originName = result.originName,
+                destinationName = result.destinationName,
+                durationText = result.durationText,
+                durationSeconds = result.durationSeconds,
+                distanceText = result.distanceText,
+                distanceMeters = result.distanceMeters,
             )
         }
     }

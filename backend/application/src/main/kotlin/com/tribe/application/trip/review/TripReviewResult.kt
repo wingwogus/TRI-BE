@@ -19,9 +19,10 @@ object TripReviewResult {
         val content: String?,
         val createdAt: LocalDateTime?,
         val recommendedPlaces: List<RecommendedPlaceResult>,
+        val routeOptimization: RouteOptimizationResult?,
     ) {
         companion object {
-            fun from(review: TripReview): ReviewDetail {
+            fun from(review: TripReview, routeOptimization: RouteOptimizationResult? = null): ReviewDetail {
                 val assembler = PlaceResultAssembler()
                 return ReviewDetail(
                     reviewId = review.id,
@@ -43,6 +44,7 @@ object TripReviewResult {
                             placeDetailSummary = assembler.toDetailSummary(it.place),
                         )
                     },
+                    routeOptimization = routeOptimization,
                 )
             }
         }
@@ -83,5 +85,40 @@ object TripReviewResult {
         val normalizedCategoryKey: NormalizedPlaceCategoryKey?,
         val photoHint: PhotoHint?,
         val placeDetailSummary: PlaceDetailSummary?,
+    )
+
+    data class RouteOptimizationResult(
+        val days: List<RouteOptimizationDay>,
+    )
+
+    data class RouteOptimizationDay(
+        val visitDay: Int,
+        val currentOrder: List<RouteOptimizationItem>,
+        val optimizedOrder: List<RouteOptimizationItem>,
+        val currentDurationSeconds: Long?,
+        val optimizedDurationSeconds: Long?,
+        val savedDurationSeconds: Long?,
+        val currentLegs: List<RouteOptimizationLeg>,
+        val optimizedLegs: List<RouteOptimizationLeg>,
+        val warnings: List<String>,
+    )
+
+    data class RouteOptimizationItem(
+        val itemId: Long,
+        val itemOrder: Int,
+        val name: String,
+        val placeId: Long?,
+        val externalPlaceId: String?,
+    )
+
+    data class RouteOptimizationLeg(
+        val originItemId: Long,
+        val destinationItemId: Long,
+        val originName: String,
+        val destinationName: String,
+        val durationText: String?,
+        val durationSeconds: Long?,
+        val distanceText: String?,
+        val distanceMeters: Long?,
     )
 }

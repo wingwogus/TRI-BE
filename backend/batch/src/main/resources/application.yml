@@ -8,6 +8,8 @@ tribe:
     place-search:
       enabled: false
   trip:
+    ai-generation:
+      enabled: false
     review:
       enabled: false
 

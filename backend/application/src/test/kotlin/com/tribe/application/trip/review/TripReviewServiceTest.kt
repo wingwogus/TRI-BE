@@ -42,6 +42,7 @@ class TripReviewServiceTest {
     @Mock private lateinit var placeSearchService: PlaceSearchService
     @Mock private lateinit var placeCatalogService: PlaceCatalogService
     @Mock private lateinit var recommendedPlaceRepository: RecommendedPlaceRepository
+    @Mock private lateinit var routeOptimizationService: TripRouteOptimizationService
 
     private lateinit var service: TripReviewService
 
@@ -54,6 +55,7 @@ class TripReviewServiceTest {
             placeSearchService = placeSearchService,
             placeCatalogService = placeCatalogService,
             recommendedPlaceRepository = recommendedPlaceRepository,
+            routeOptimizationService = routeOptimizationService,
         )
     }
 

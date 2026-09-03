@@ -1,6 +1,7 @@
 package com.tribe.application.trip.core
 
 import java.time.LocalDate
+import java.time.LocalDateTime
 
 object TripCommand {
     data class Create(
@@ -9,6 +10,24 @@ object TripCommand {
         val endDate: LocalDate,
         val country: String,
         val regionCode: String? = null,
+    )
+
+    data class CreateWithItems(
+        val title: String,
+        val startDate: LocalDate,
+        val endDate: LocalDate,
+        val country: String,
+        val regionCode: String? = null,
+        val items: List<CreateItem>,
+    )
+
+    data class CreateItem(
+        val visitDay: Int,
+        val order: Int,
+        val placeId: Long? = null,
+        val title: String? = null,
+        val time: LocalDateTime? = null,
+        val memo: String? = null,
     )
 
     data class Update(

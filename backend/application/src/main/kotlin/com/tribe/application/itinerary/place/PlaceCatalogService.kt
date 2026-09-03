@@ -35,20 +35,28 @@ class PlaceCatalogService(
         longitude: BigDecimal,
         language: String = "ko",
     ): Place {
-        val place = placeRepository.findByExternalPlaceId(externalPlaceId) ?: placeRepository.save(
-            Place(
-                externalPlaceId = externalPlaceId,
-                name = placeName,
-                address = address,
-                latitude = latitude,
-                longitude = longitude,
-            ),
-        )
+        val place = getOrCreate(externalPlaceId, placeName, address, latitude, longitude)
 
         enrichDetailsIfNeeded(place, language)
 
         return place
     }
+
+    fun getOrCreate(
+        externalPlaceId: String,
+        placeName: String,
+        address: String?,
+        latitude: BigDecimal,
+        longitude: BigDecimal,
+    ): Place = placeRepository.findByExternalPlaceId(externalPlaceId) ?: placeRepository.save(
+        Place(
+            externalPlaceId = externalPlaceId,
+            name = placeName,
+            address = address,
+            latitude = latitude,
+            longitude = longitude,
+        ),
+    )
 
     fun mergeWithCanonical(results: List<PlaceSearchGateway.SearchHit>): List<PlaceResult.SearchItem> {
         val existingMap = findExistingPlaces(results)

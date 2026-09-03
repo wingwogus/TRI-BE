@@ -22,6 +22,20 @@ class OllamaWebClientGatewayTest {
     }
 
     @Test
+    fun `buildJsonRequestBody sends schema through ollama format`() {
+        val schema = mapOf(
+            "type" to "object",
+            "properties" to mapOf("title" to mapOf("type" to "string")),
+        )
+
+        val body = gateway.buildJsonRequestBody("generate trip", schema)
+
+        assertEquals(schema, body["format"])
+        assertEquals(mapOf("temperature" to 0), body["options"])
+        assertEquals(false, body["stream"])
+    }
+
+    @Test
     fun `extractResponseText returns ollama response field`() {
         val response = mapOf(
             "response" to "ollama-output",

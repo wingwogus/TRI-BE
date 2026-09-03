@@ -9,6 +9,8 @@ import com.tribe.application.trip.member.TripMemberIntegrityService
 import com.tribe.domain.community.CommunityPost
 import com.tribe.domain.community.CommunityPostRepository
 import com.tribe.domain.itinerary.item.ItineraryItem
+import com.tribe.domain.itinerary.place.Place
+import com.tribe.domain.itinerary.place.PlaceRepository
 import com.tribe.domain.member.Member
 import com.tribe.domain.member.MemberRepository
 import com.tribe.domain.trip.core.Country
@@ -24,13 +26,20 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.mockito.ArgumentCaptor
 import org.mockito.Mock
 import org.mockito.Mockito.any
+import org.mockito.Mockito.eq
+import org.mockito.Mockito.never
+import org.mockito.Mockito.times
+import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
+import java.math.BigDecimal
 import java.time.LocalDate
+import java.time.LocalDateTime
 
 @ExtendWith(MockitoExtension::class)
 class TripServiceTest {
@@ -43,6 +52,7 @@ class TripServiceTest {
     @Mock private lateinit var tripMemberRepository: TripMemberRepository
     @Mock private lateinit var tripInvitationRepository: TripInvitationRepository
     @Mock private lateinit var communityPostRepository: CommunityPostRepository
+    @Mock private lateinit var placeRepository: PlaceRepository
 
     private lateinit var tripService: TripService
 
@@ -58,6 +68,7 @@ class TripServiceTest {
             tripMemberRepository = tripMemberRepository,
             tripInvitationRepository = tripInvitationRepository,
             communityPostRepository = communityPostRepository,
+            placeRepository = placeRepository,
             appUrl = "http://localhost:3000",
         )
     }
@@ -105,6 +116,105 @@ class TripServiceTest {
         )
 
         assertNull(result.regionCode)
+    }
+
+    @Test
+    fun `createTripWithItems batches place lookup and attaches itinerary items`() {
+        val member = Member(id = 1L, email = "user@example.com", passwordHash = "hashed", nickname = "tribe")
+        val breakfast = place(10L, "Breakfast Spot")
+        val museum = place(20L, "Museum")
+        val itemTime = LocalDateTime.of(2026, 4, 12, 9, 0)
+
+        `when`(currentActor.requireUserId()).thenReturn(1L)
+        `when`(memberRepository.findById(1L)).thenReturn(java.util.Optional.of(member))
+        `when`(placeRepository.findAllById(listOf(20L, 10L))).thenReturn(listOf(museum, breakfast))
+        `when`(tripRepository.save(any(Trip::class.java))).thenAnswer { it.arguments[0] as Trip }
+
+        val result = tripService.createTripWithItems(
+            TripCommand.CreateWithItems(
+                title = "AI Trip",
+                startDate = LocalDate.of(2026, 4, 12),
+                endDate = LocalDate.of(2026, 4, 13),
+                country = Country.JAPAN.code,
+                regionCode = TripRegion.JP_TOKYO.code,
+                items = listOf(
+                    TripCommand.CreateItem(visitDay = 1, order = 2, placeId = 20L, title = "Museum stop", time = itemTime.plusHours(4), memo = "Afternoon"),
+                    TripCommand.CreateItem(visitDay = 1, order = 1, placeId = 10L, title = "Breakfast", time = itemTime, memo = "Window seat"),
+                    TripCommand.CreateItem(visitDay = 2, order = 1, placeId = null, title = "Free walk", time = null, memo = "  Explore side streets  "),
+                ),
+            ),
+        )
+
+        val tripCaptor = ArgumentCaptor.forClass(Trip::class.java)
+        verify(placeRepository, times(1)).findAllById(eq(listOf(20L, 10L)))
+        verify(tripRepository).save(tripCaptor.capture())
+
+        val savedTrip = tripCaptor.value
+
+        assertEquals("AI Trip", result.title)
+        assertEquals(1, savedTrip.members.size)
+        assertEquals(3, savedTrip.itineraryItems.size)
+        assertEquals(20L, savedTrip.itineraryItems[0].place?.id)
+        assertEquals(2, savedTrip.itineraryItems[0].order)
+        assertNull(savedTrip.itineraryItems[0].title)
+        assertEquals(10L, savedTrip.itineraryItems[1].place?.id)
+        assertEquals(1, savedTrip.itineraryItems[1].order)
+        assertEquals(itemTime, savedTrip.itineraryItems[1].time)
+        assertEquals("Free walk", savedTrip.itineraryItems[2].title)
+        assertEquals("Explore side streets", savedTrip.itineraryItems[2].memo)
+        assertNull(savedTrip.itineraryItems[2].place)
+    }
+
+    @Test
+    fun `createTripWithItems rejects missing place before save`() {
+        val breakfast = place(10L, "Breakfast Spot")
+
+        `when`(placeRepository.findAllById(listOf(10L, 20L))).thenReturn(listOf(breakfast))
+
+        val ex = assertThrows(BusinessException::class.java) {
+            tripService.createTripWithItems(
+                TripCommand.CreateWithItems(
+                    title = "AI Trip",
+                    startDate = LocalDate.of(2026, 4, 12),
+                    endDate = LocalDate.of(2026, 4, 13),
+                    country = Country.JAPAN.code,
+                    regionCode = TripRegion.JP_TOKYO.code,
+                    items = listOf(
+                        TripCommand.CreateItem(visitDay = 1, order = 1, placeId = 10L, title = null, time = null, memo = null),
+                        TripCommand.CreateItem(visitDay = 1, order = 2, placeId = 20L, title = null, time = null, memo = null),
+                    ),
+                ),
+            )
+        }
+
+        assertEquals(ErrorCode.PLACE_NOT_FOUND, ex.errorCode)
+        verify(tripRepository, never()).save(any(Trip::class.java))
+    }
+
+    @Test
+    fun `createTripWithItems rejects item without place or title before save`() {
+        val member = Member(id = 1L, email = "user@example.com", passwordHash = "hashed", nickname = "tribe")
+
+        `when`(currentActor.requireUserId()).thenReturn(1L)
+        `when`(memberRepository.findById(1L)).thenReturn(java.util.Optional.of(member))
+
+        val ex = assertThrows(BusinessException::class.java) {
+            tripService.createTripWithItems(
+                TripCommand.CreateWithItems(
+                    title = "AI Trip",
+                    startDate = LocalDate.of(2026, 4, 12),
+                    endDate = LocalDate.of(2026, 4, 13),
+                    country = Country.JAPAN.code,
+                    regionCode = TripRegion.JP_TOKYO.code,
+                    items = listOf(
+                        TripCommand.CreateItem(visitDay = 1, order = 1, placeId = null, title = "   ", time = null, memo = null),
+                    ),
+                ),
+            )
+        }
+
+        assertEquals(ErrorCode.INVALID_INPUT_VALUE, ex.errorCode)
+        verify(tripRepository, never()).save(any(Trip::class.java))
     }
 
     @Test
@@ -287,5 +397,19 @@ class TripServiceTest {
         )
 
         assertEquals(null, result.regionCode)
+    }
+
+    private fun place(id: Long, name: String): Place {
+        val place = Place(
+            externalPlaceId = "ext-$id",
+            name = name,
+            address = "Address $id",
+            latitude = BigDecimal("35.0"),
+            longitude = BigDecimal("139.0"),
+        )
+        val idField = Place::class.java.getDeclaredField("id")
+        idField.isAccessible = true
+        idField.setLong(place, id)
+        return place
     }
 }

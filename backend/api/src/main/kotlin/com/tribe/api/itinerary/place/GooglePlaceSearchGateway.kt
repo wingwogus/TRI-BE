@@ -184,6 +184,8 @@ class GooglePlaceSearchGateway(
             destinationPlace = destination,
             totalDuration = leg.duration?.text ?: "",
             totalDistance = leg.distance?.text ?: "",
+            totalDurationSeconds = leg.duration?.value,
+            totalDistanceMeters = leg.distance?.value,
             steps = leg.steps.map { rawStep ->
                 RouteDetails.RouteStep(
                     travelMode = rawStep.travelMode ?: "",
