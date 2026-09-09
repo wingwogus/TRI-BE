@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.stereotype.Component
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /**
  * 여행 application port 경계.
@@ -22,6 +24,22 @@ class RedisTripRealtimeEventPublisher(
     }
 
     override fun publish(event: TripRealtimeEvent) {
+        if (TransactionSynchronizationManager.isActualTransactionActive() &&
+            TransactionSynchronizationManager.isSynchronizationActive()
+        ) {
+            TransactionSynchronizationManager.registerSynchronization(
+                object : TransactionSynchronization {
+                    override fun afterCommit() {
+                        publishNow(event)
+                    }
+                },
+            )
+            return
+        }
+        publishNow(event)
+    }
+
+    private fun publishNow(event: TripRealtimeEvent) {
         redis.convertAndSend(CHANNEL, objectMapper.writeValueAsString(event))
     }
 }

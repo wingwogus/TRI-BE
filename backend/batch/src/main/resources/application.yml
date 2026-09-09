@@ -20,6 +20,8 @@ tribe:
       regular-hours-freshness-days: ${WISHLIST_PLACE_REFRESH_REGULAR_HOURS_FRESHNESS_DAYS:30}
       current-hours-freshness-days: ${WISHLIST_PLACE_REFRESH_CURRENT_HOURS_FRESHNESS_DAYS:7}
   trip:
+    ai-generation:
+      enabled: false
     review:
       enabled: false
 

@@ -19,6 +19,8 @@ import com.tribe.domain.community.CommunityPostRepository
 import com.tribe.domain.itinerary.item.ItineraryItem
 import com.tribe.domain.itinerary.item.ItineraryItemRepository
 import com.tribe.domain.itinerary.wishlist.WishlistItemRepository
+import com.tribe.domain.itinerary.place.Place
+import com.tribe.domain.itinerary.place.PlaceRepository
 import com.tribe.domain.trip.core.Country
 import com.tribe.domain.trip.core.TripRegion
 import com.tribe.domain.member.MemberRepository
@@ -57,6 +59,7 @@ class TripService(
     private val communityPostRepository: CommunityPostRepository,
     private val wishlistItemRepository: WishlistItemRepository,
     private val itineraryItemRepository: ItineraryItemRepository,
+    private val placeRepository: PlaceRepository,
     @Value("\${app.url}") private val appUrl: String,
 ) {
     companion object {
@@ -65,18 +68,67 @@ class TripService(
     }
 
     fun createTrip(command: TripCommand.Create): TripResult.TripDetail {
-        val member = findCurrentMember()
-        val country = resolveCountry(command.country)
-        val regionCode = validateRegionCode(country, command.regionCode)
-        val trip = Trip(
+        val trip = createOwnedTrip(
             title = command.title,
             startDate = command.startDate,
             endDate = command.endDate,
-            country = country,
-            regionCode = regionCode,
-        ).apply {
-            addMember(member, TripRole.OWNER)
+            country = command.country,
+            regionCode = command.regionCode,
+        )
+        return saveCreatedTrip(trip)
+    }
+
+    fun createTripWithItems(command: TripCommand.CreateWithItems): TripResult.TripDetail {
+        val placesById = resolvePlacesById(command.items)
+        val trip = createOwnedTrip(
+            title = command.title,
+            startDate = command.startDate,
+            endDate = command.endDate,
+            country = command.country,
+            regionCode = command.regionCode,
+        )
+
+        command.items.forEach { item ->
+            val place = item.placeId?.let { placesById[it] }
+            val title = if (place == null) normalizeNullableText(item.title) else null
+            if (place == null && title == null) {
+                throw BusinessException(ErrorCode.INVALID_INPUT_VALUE)
+            }
+            trip.itineraryItems.add(
+                ItineraryItem(
+                    trip = trip,
+                    visitDay = item.visitDay,
+                    place = place,
+                    title = title,
+                    time = item.time,
+                    order = item.order,
+                    memo = normalizeNullableText(item.memo),
+                ),
+            )
         }
+
+        return saveCreatedTrip(trip)
+    }
+
+    private fun createOwnedTrip(
+        title: String,
+        startDate: LocalDate,
+        endDate: LocalDate,
+        country: String,
+        regionCode: String?,
+    ): Trip {
+        val member = findCurrentMember()
+        val resolvedCountry = resolveCountry(country)
+        return Trip(
+            title = title,
+            startDate = startDate,
+            endDate = endDate,
+            country = resolvedCountry,
+            regionCode = validateRegionCode(resolvedCountry, regionCode),
+        ).apply { addMember(member, TripRole.OWNER) }
+    }
+
+    private fun saveCreatedTrip(trip: Trip): TripResult.TripDetail {
         val result = TripResult.TripDetail.from(tripRepository.save(trip))
         tripRealtimeEventPublisher.publish(
             TripRealtimeEvent(
@@ -373,9 +425,31 @@ class TripService(
     private fun totalDaysInclusive(startDate: LocalDate, endDate: LocalDate): Int =
         ChronoUnit.DAYS.between(startDate, endDate).toInt() + 1
 
+    private fun resolvePlacesById(items: List<TripCommand.CreateItem>): Map<Long, Place> {
+        val placeIds = items.mapNotNull { it.placeId }.distinct()
+        if (placeIds.isEmpty()) {
+            return emptyMap()
+        }
+
+        val places = placeRepository.findAllById(placeIds)
+        if (places.size != placeIds.size) {
+            val foundIds = places.map { it.id }.toSet()
+            val missingPlaceId = placeIds.firstOrNull { it !in foundIds }
+            throw BusinessException(
+                ErrorCode.PLACE_NOT_FOUND,
+                detail = missingPlaceId?.let { mapOf("placeId" to it) },
+            )
+        }
+
+        return places.associateBy { it.id }
+    }
+
     private fun findTripWithMembers(tripId: Long): Trip =
         tripRepository.findTripWithMembersById(tripId)
             ?: throw BusinessException(ErrorCode.TRIP_NOT_FOUND)
+
+    private fun normalizeNullableText(value: String?): String? =
+        value?.trim()?.takeIf { it.isNotEmpty() }
 
     private fun generateInvitationToken(): String {
         val randomBytes = ByteArray(16)

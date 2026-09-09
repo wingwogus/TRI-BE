@@ -1,6 +1,6 @@
-import {useState} from "react";
+import {lazy, Suspense, useState} from "react";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import {CalendarDays, ChevronRight, Pencil, Plus, Trash2, Users} from "lucide-react";
+import {CalendarDays, ChevronRight, Pencil, Plus, Sparkles, Trash2, Users} from "lucide-react";
 import {Card, CardContent} from "@/components/ui/card";
 import {useNavigate} from "react-router-dom";
 import {TripCreationModal} from "@/components/TripCreationModal";
@@ -83,11 +83,15 @@ const getInitials = (nickname?: string | null) => {
   return trimmedNickname.slice(0, 2).toUpperCase();
 };
 
+const AiTripCreationModal = lazy(() => import("@/components/AiTripCreationModal"));
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showTripCreationModal, setShowTripCreationModal] = useState(false);
+  const [showAiCreation, setShowAiCreation] = useState(false);
+  const [hasOpenedAiCreation, setHasOpenedAiCreation] = useState(false);
   const [showTripJoinModal, setShowTripJoinModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showNicknameModal, setShowNicknameModal] = useState(false);
@@ -455,6 +459,19 @@ const Dashboard = () => {
               <Plus className="h-4 w-4" />
               새 여행 만들기
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 w-full gap-2 rounded-full border-primary bg-white px-5 text-sm font-semibold text-primary shadow-none hover:bg-primary/5 sm:w-auto"
+              onClick={() => {
+                if (!isLoggedIn) { setShowLoginModal(true); return; }
+                setHasOpenedAiCreation(true);
+                setShowAiCreation(true);
+              }}
+            >
+              <Sparkles className="h-4 w-4" />
+              AI 여행 만들기
+            </Button>
           </div>
         </div>
 
@@ -507,6 +524,17 @@ const Dashboard = () => {
         onClose={() => setShowTripCreationModal(false)}
         onCreateTrip={(tripData) => createTripMutation.mutate(tripData)}
       />
+
+      {hasOpenedAiCreation && isLoggedIn && (
+        <Suspense fallback={<p role="status" className="fixed bottom-4 left-4 z-50 rounded-md border bg-background px-4 py-3 text-sm">AI 여행 양식을 불러오는 중...</p>}>
+          <AiTripCreationModal
+            key={user.memberId}
+            open={showAiCreation}
+            onOpenChange={setShowAiCreation}
+            onTripCreated={(tripId) => { setShowAiCreation(false); navigate(`/trip/${tripId}`); }}
+          />
+        </Suspense>
+      )}
 
       <TripJoinModal
         isOpen={showTripJoinModal}

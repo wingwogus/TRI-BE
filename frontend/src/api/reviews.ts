@@ -2,6 +2,41 @@ import { authenticatedAxios } from "@/api/auth";
 import type { ApiResponse } from "@/api/http";
 import type { PlaceSearchResult } from "@/api/places";
 
+export interface RouteOptimizationItem {
+  itemId: number;
+  itemOrder: number;
+  name: string;
+  placeId: number | null;
+  externalPlaceId: string | null;
+}
+
+export interface RouteOptimizationLeg {
+  originItemId: number;
+  destinationItemId: number;
+  originName: string;
+  destinationName: string;
+  durationText: string | null;
+  durationSeconds: number | null;
+  distanceText: string | null;
+  distanceMeters: number | null;
+}
+
+export interface RouteOptimizationDay {
+  visitDay: number;
+  currentOrder: RouteOptimizationItem[];
+  optimizedOrder: RouteOptimizationItem[];
+  currentDurationSeconds: number | null;
+  optimizedDurationSeconds: number | null;
+  savedDurationSeconds: number | null;
+  currentLegs: RouteOptimizationLeg[];
+  optimizedLegs: RouteOptimizationLeg[];
+  warnings: string[];
+}
+
+export interface RouteOptimization {
+  days: RouteOptimizationDay[];
+}
+
 export interface TripReview {
   reviewId: number;
   title?: string | null;
@@ -9,6 +44,7 @@ export interface TripReview {
   content: string;
   createdAt: string;
   recommendedPlaces: PlaceSearchResult[];
+  routeOptimization?: RouteOptimization | null;
 }
 
 export interface CreateReviewRequest {
@@ -22,6 +58,7 @@ interface BackendReviewDetail {
   content: string | null;
   createdAt: string | null;
   recommendedPlaces: PlaceSearchResult[];
+  routeOptimization?: RouteOptimization | null;
 }
 
 interface BackendReviewSummary {
@@ -38,6 +75,7 @@ const toTripReview = (review: BackendReviewDetail | BackendReviewSummary): TripR
   content: "content" in review ? review.content || "" : "",
   createdAt: review.createdAt || "",
   recommendedPlaces: "recommendedPlaces" in review ? review.recommendedPlaces || [] : [],
+  routeOptimization: "routeOptimization" in review ? review.routeOptimization ?? null : null,
 });
 
 export const reviewApi = {
