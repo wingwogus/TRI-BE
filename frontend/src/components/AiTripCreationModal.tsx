@@ -77,7 +77,7 @@ export default function AiTripCreationModal({ open, onOpenChange, onTripCreated 
   const requestError = ai.error instanceof ZodError ? "응답 내용을 확인할 수 없습니다. 다시 시도해주세요." : ai.error ? readApiErrorMessage(ai.error, "요청을 완료하지 못했습니다. 잠시 후 다시 시도해주세요.") : "";
 
   return <Dialog open={open} onOpenChange={(nextOpen) => { if (!ai.isApplying) onOpenChange(nextOpen); }}>
-    <DialogContent className="min-h-[34rem] max-h-[90dvh] w-[calc(100%-0.75rem)] max-w-3xl grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg p-5 sm:min-h-[38rem] sm:p-8">
+    <DialogContent className="min-h-[34rem] max-h-[90dvh] w-[98vw] max-w-6xl grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg p-5 sm:min-h-[38rem] sm:p-8">
       <DialogHeader className="pr-7 text-left"><DialogTitle className="flex items-center gap-2 tracking-normal"><Sparkles className="h-5 w-5 shrink-0 text-primary" />AI 여행 만들기</DialogTitle><DialogDescription>여행 정보를 하나씩 선택하면 조건에 맞는 일정을 만들어드려요.</DialogDescription></DialogHeader>
       <div className="min-h-0 min-w-0 overflow-y-auto overscroll-contain px-0" aria-busy={busy}>
         {(validationError || requestError) && <p role="alert" className="mb-4 break-words rounded-md border border-destructive/30 p-3 text-sm text-destructive">{validationError || requestError}</p>}
