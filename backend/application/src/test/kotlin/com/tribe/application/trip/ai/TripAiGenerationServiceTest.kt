@@ -94,21 +94,20 @@ class TripAiGenerationServiceTest {
         `when`(currentActor.requireUserId()).thenReturn(1L)
         `when`(proposalRepository.findByIdAndRequesterMemberId(10L, 1L)).thenReturn(proposal)
         stubDotonboriSearchNoResults()
-        val expectedItem = TripAiResolvedItem(
-            visitDay = 1,
-            order = 1,
-            placeId = null,
-            title = "도톤보리",
-            time = java.time.LocalDateTime.of(2026, 6, 1, 10, 0),
-            memo = "산책",
+        val expectedItems = listOf(
+            TripAiResolvedItem(1, 1, null, "도톤보리", java.time.LocalDateTime.of(2026, 6, 1, 10, 0), "산책"),
+            TripAiResolvedItem(1, 2, null, "도톤보리 점심", java.time.LocalDateTime.of(2026, 6, 1, 12, 30), "점심"),
+            TripAiResolvedItem(1, 3, null, "도톤보리 카페", java.time.LocalDateTime.of(2026, 6, 1, 15, 0), "휴식"),
+            TripAiResolvedItem(1, 4, null, "도톤보리 저녁", java.time.LocalDateTime.of(2026, 6, 1, 18, 30), "저녁"),
+            TripAiResolvedItem(1, 5, null, "도톤보리 야경", java.time.LocalDateTime.of(2026, 6, 1, 20, 30), "야경"),
         )
-        val expectedResult = TripAiGenerationResult.Applied(10L, "APPLIED", 77L, 1, 1)
-        `when`(applyService.apply(10L, listOf(expectedItem), true)).thenReturn(expectedResult)
+        val expectedResult = TripAiGenerationResult.Applied(10L, "APPLIED", 77L, 5, 5)
+        `when`(applyService.apply(10L, expectedItems, true)).thenReturn(expectedResult)
 
         val result = service.applyProposal(TripAiGenerationCommand.Apply(10L, allowTextOnlyItems = true))
 
         assertEquals(expectedResult, result)
-        verify(applyService).apply(10L, listOf(expectedItem), true)
+        verify(applyService).apply(10L, expectedItems, true)
     }
 
     @Test
@@ -170,8 +169,11 @@ class TripAiGenerationServiceTest {
         val expectedItems = listOf(
             TripAiResolvedItem(1, 1, 31L, "도톤보리", java.time.LocalDateTime.of(2026, 6, 1, 10, 0), "산책"),
             TripAiResolvedItem(1, 2, 31L, "도톤보리 재방문", java.time.LocalDateTime.of(2026, 6, 1, 18, 0), null),
+            TripAiResolvedItem(1, 3, 31L, "도톤보리 카페", java.time.LocalDateTime.of(2026, 6, 1, 15, 0), null),
+            TripAiResolvedItem(1, 4, 31L, "도톤보리 저녁", java.time.LocalDateTime.of(2026, 6, 1, 18, 30), null),
+            TripAiResolvedItem(1, 5, 31L, "도톤보리 야경", java.time.LocalDateTime.of(2026, 6, 1, 20, 30), null),
         )
-        val expectedResult = TripAiGenerationResult.Applied(10L, "APPLIED", 77L, 2, 0)
+        val expectedResult = TripAiGenerationResult.Applied(10L, "APPLIED", 77L, 5, 0)
         `when`(applyService.apply(10L, expectedItems, true)).thenReturn(expectedResult)
 
         val result = service.applyProposal(TripAiGenerationCommand.Apply(10L))
@@ -252,6 +254,34 @@ class TripAiGenerationServiceTest {
                   "memo": "산책",
                   "durationMinutes": 90,
                   "styleTags": ["FOOD"]
+                },
+                {
+                  "order": 2,
+                  "time": "12:30",
+                  "placeName": "도톤보리 점심",
+                  "searchQuery": "오사카 도톤보리",
+                  "memo": "점심"
+                },
+                {
+                  "order": 3,
+                  "time": "15:00",
+                  "placeName": "도톤보리 카페",
+                  "searchQuery": "오사카 도톤보리",
+                  "memo": "휴식"
+                },
+                {
+                  "order": 4,
+                  "time": "18:30",
+                  "placeName": "도톤보리 저녁",
+                  "searchQuery": "오사카 도톤보리",
+                  "memo": "저녁"
+                },
+                {
+                  "order": 5,
+                  "time": "20:30",
+                  "placeName": "도톤보리 야경",
+                  "searchQuery": "오사카 도톤보리",
+                  "memo": "야경"
                 }
               ]
             }
@@ -277,6 +307,24 @@ class TripAiGenerationServiceTest {
                   "order": 2,
                   "time": "18:00",
                   "placeName": "도톤보리 재방문",
+                  "searchQuery": "오사카 도톤보리"
+                },
+                {
+                  "order": 3,
+                  "time": "15:00",
+                  "placeName": "도톤보리 카페",
+                  "searchQuery": "오사카 도톤보리"
+                },
+                {
+                  "order": 4,
+                  "time": "18:30",
+                  "placeName": "도톤보리 저녁",
+                  "searchQuery": "오사카 도톤보리"
+                },
+                {
+                  "order": 5,
+                  "time": "20:30",
+                  "placeName": "도톤보리 야경",
                   "searchQuery": "오사카 도톤보리"
                 }
               ]

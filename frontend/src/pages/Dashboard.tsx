@@ -1,6 +1,6 @@
-import {useState} from "react";
+import {lazy, Suspense, useState} from "react";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import {Calendar, MapPin, Plus, Settings, Trash2, Users} from "lucide-react";
+import {Calendar, MapPin, Plus, Settings, Sparkles, Trash2, Users} from "lucide-react";
 import {Card, CardContent} from "@/components/ui/card";
 import {useNavigate} from "react-router-dom";
 import {TripCreationModal} from "@/components/TripCreationModal";
@@ -18,11 +18,15 @@ import {Button} from "@/components/ui/button";
 import {getCountryEmoji} from "@/lib/utils";
 import {formatTripDestination} from "@/lib/tripRegions";
 
+const AiTripCreationModal = lazy(() => import("@/components/AiTripCreationModal"));
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showTripCreationModal, setShowTripCreationModal] = useState(false);
+  const [showAiCreation, setShowAiCreation] = useState(false);
+  const [hasOpenedAiCreation, setHasOpenedAiCreation] = useState(false);
   const [showTripJoinModal, setShowTripJoinModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showNicknameModal, setShowNicknameModal] = useState(false);
@@ -198,6 +202,11 @@ const Dashboard = () => {
         <div className="mb-6 md:mb-8">
           <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">나의 여행</h2>
           <p className="text-sm md:text-base text-muted-foreground">함께 만들어가는 특별한 여행을 시작해보세요</p>
+          <Button className="mt-4" onClick={() => {
+            if (!isLoggedIn) { setShowLoginModal(true); return; }
+            setHasOpenedAiCreation(true);
+            setShowAiCreation(true);
+          }}><Sparkles className="mr-2 h-4 w-4" />AI 여행 만들기</Button>
         </div>
 
         {/* Trip Cards */}
@@ -304,6 +313,17 @@ const Dashboard = () => {
         onClose={() => setShowTripCreationModal(false)}
         onCreateTrip={(tripData) => createTripMutation.mutate(tripData)}
       />
+
+      {hasOpenedAiCreation && isLoggedIn && (
+        <Suspense fallback={<p role="status" className="fixed bottom-4 left-4 z-50 rounded-md border bg-background px-4 py-3 text-sm">AI 여행 양식을 불러오는 중...</p>}>
+          <AiTripCreationModal
+            key={user.memberId}
+            open={showAiCreation}
+            onOpenChange={setShowAiCreation}
+            onTripCreated={(tripId) => { setShowAiCreation(false); navigate(`/trip/${tripId}`); }}
+          />
+        </Suspense>
+      )}
 
       <TripJoinModal
         isOpen={showTripJoinModal}

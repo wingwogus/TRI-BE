@@ -63,7 +63,7 @@ class TripAiGenerationParser(
             throw BusinessException(ErrorCode.AI_FEEDBACK_ERROR)
         }
         payload.days.forEach { day ->
-            if (day.items.isEmpty() || day.items.size > TripAiGenerationPromptBuilder.MAX_ITEMS_PER_DAY) {
+            if (day.items.size !in TripAiGenerationPromptBuilder.MIN_ITEMS_PER_DAY..TripAiGenerationPromptBuilder.MAX_ITEMS_PER_DAY) {
                 throw BusinessException(ErrorCode.AI_FEEDBACK_ERROR)
             }
             val orders = day.items.map { it.order }

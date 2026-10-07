@@ -1,6 +1,7 @@
 export const normalizeTripId = (tripId: string | number) => String(tripId);
 
 export const tripQueryKeys = {
+  aiTripProposal: (proposalId: number | null) => ["aiTripProposal", proposalId] as const,
   trip: (tripId: string | number) => ["trip", normalizeTripId(tripId)] as const,
   itinerary: (tripId: string | number) => ["itinerary", normalizeTripId(tripId)] as const,
   directions: (tripId: string | number) => ["directions", normalizeTripId(tripId)] as const,

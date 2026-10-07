@@ -25,5 +25,9 @@ class TripAiGenerationPromptBuilderTest {
         assertTrue(prompt.contains("FAMILY"))
         assertTrue(prompt.contains("FOOD"))
         assertTrue(prompt.contains("\"dayCount\":5"))
+        assertTrue(prompt.contains("\"minItemsPerDay\":5"))
+        assertTrue(prompt.contains("아침 식사/오전 활동/점심 식사/오후 활동"))
+        assertTrue(prompt.contains("이동이 대중교통 또는 도보 기준 45분을 넘지 않도록"))
+        assertTrue(prompt.contains("그 장소가 어떤 곳인지, 무엇을 할 수 있는지, 왜 이 일정에 추천했는지"))
     }
 }
