@@ -1,6 +1,8 @@
 name: Tribe Backend CI/CD
 
 on:
+  pull_request:
+    branches: [ "dev", "main" ]
   push:
     branches: [ "main" ]
     paths:
@@ -11,11 +13,53 @@ permissions:
   contents: read
 
 concurrency:
-  group: tribe-backend-cicd-main
+  group: tribe-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  pr-verify:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR merge result
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check changed-file whitespace
+        run: git diff --check HEAD^ HEAD
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Verify frontend
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npm run lint
+          npm run test
+          npm run typecheck
+          npm run build
+
+      - name: Set up JDK 21 for tests
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: "gradle"
+
+      - name: Verify backend
+        working-directory: ./backend
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon test
+
   build-and-deploy:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     env:
       DEFAULT_IMAGE_REPOSITORY: vantagac/tribe-api

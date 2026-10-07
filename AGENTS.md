@@ -38,13 +38,18 @@ Harness engineering means contract, fixture, scenario, and verification come bef
 
 A feature is not done unless at least one requirement is locked by an automated check or a documented manual smoke check. If verification is skipped, report the reason and residual risk.
 
-## Git Rules
+## Development Workflow
 
-- Commit subjects must use Conventional Commits: `type(scope): 제목`.
-- Allowed types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`.
-- Full branch and PR policy lives in `docs/runbooks/git-flow.md`.
-- GitHub PRs must use `.github/pull_request_template.md` and explicitly fill verification, skipped checks, residual risk, and contract/runbook changes.
-- For decision-heavy commits, keep the Conventional Commits subject and add an explanatory body or git-native trailers when they materially capture constraints, rejected alternatives, test evidence, or residual risk.
+Before changing code, configuration, documentation, tests, or deployment files:
+
+1. Read `docs/runbooks/git-flow.md` and check the current branch and working tree.
+2. Do not develop directly on `main` or `dev`; use the appropriate `feat/*`, `fix/*`, `hotfix/*`, or `chore/*` branch.
+3. If the current branch violates this policy, report the required branch action before editing files.
+4. Preserve unrelated user changes: do not overwrite, revert, stash, commit, push, or delete them.
+5. Run relevant verification before declaring the work complete.
+6. Follow `docs/runbooks/git-flow.md` for commits, PRs, reviews, merges, releases, and hotfixes.
+
+Read-only investigation and explanation do not require a new branch. An explicit user instruction to use another branch or worktree takes precedence; report the associated risk.
 
 ## Boundaries
 

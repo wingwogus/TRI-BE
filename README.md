@@ -164,3 +164,4 @@ val transferKrw = transferOriginal.multiply(exchangeRate).setScale(0, RoundingMo
 - `frontend/README.md`
 - `backend/README.md`
 - `ops/README.md`
+- `docs/runbooks/git-flow.md` — 브랜치, PR, 리뷰, 배포 및 긴급 수정 절차
