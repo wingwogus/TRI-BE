@@ -40,6 +40,18 @@ Treat authentication/authorization, administrator permissions, payment/settlemen
 
 Review for requirement coverage, auth/security, error handling, test coverage, regression risk, API/DB contracts, production impact, and rollback feasibility. Ask a question when clarification is genuinely needed; approval without a question is valid.
 
+### Solo fork profile
+
+The approval counts above apply to the shared upstream repository. A one-person fork cannot satisfy required independent approvals because the PR author cannot approve their own PR. In a personal fork:
+
+- keep `main` and `dev` protected from direct development and continue using `feat/*`, `fix/*`, `hotfix/*`, and `chore/*` branches;
+- require a PR and the `pr-verify` status check, but set the required approval count to `0` unless another reviewer is actually available;
+- perform a documented self-review using the PR checklist and resolve every conversation before merge;
+- for high-risk changes, record security, migration, deployment, and rollback evidence explicitly and seek external review when practical, but do not claim independent approval occurred when it did not;
+- keep `upstream` pointed at the shared repository and `origin` pointed at the personal fork. Sync reviewed upstream changes into the fork's `dev` before starting new work.
+
+This solo profile relaxes reviewer count only. It does not relax CI, branch separation, verification, rollback, or secret-handling requirements.
+
 ## Release: `dev` → `main`
 
 1. Complete integration tests on `dev` and open a release PR from `dev` to `main`.
@@ -72,6 +84,8 @@ Repository files alone do **not** activate GitHub Rulesets or Branch Protection.
 | --- | --- |
 | `main` | PR required; two approvals for release/hotfix review; CODEOWNER review after real owners are defined; required `pr-verify` status; conversations resolved; force push and deletion disabled; no direct-push bypass. |
 | `dev` | PR required; at least one approval; required `pr-verify` status; conversations resolved; force push and deletion disabled; no direct-push bypass. High-risk PRs still need a second approval and area owner. |
+
+For a one-person fork, use the same branch protections but set required approvals to `0`; keep PR, `pr-verify`, conversation resolution, force-push prevention, and deletion prevention enabled.
 
 The only PR validation workflow currently defined is `.github/workflows/ci.yml` job `pr-verify`, triggered for PRs targeting `dev` or `main`. It runs frontend lint/test/typecheck/build, backend tests, and changed-file whitespace checks. Configure `pr-verify` as a required status check **after** it has run on a PR. The same workflow's `build-and-deploy` job runs only on backend-related pushes to `main`; it is not a PR check. GitHub settings, not this YAML file, block merge on the required status.
 
