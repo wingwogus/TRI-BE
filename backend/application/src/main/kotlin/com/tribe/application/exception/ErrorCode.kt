@@ -1,5 +1,10 @@
 package com.tribe.application.exception
 
+/**
+ * 예외 application 계층 경계.
+ *
+ * 도메인 조작과 외부 adapter 의존성 분리.
+ */
 enum class ErrorCode(
     val code: String,
     val messageKey: String,
@@ -26,6 +31,7 @@ enum class ErrorCode(
     ALREADY_JOINED_TRIP("TRIP_005", "error.already_joined_trip", 409),
     BANNED_MEMBER("TRIP_006", "error.banned_member", 403),
     TRIP_REVIEW_NOT_FOUND("TRIP_007", "error.trip_review_not_found", 404),
+    TRIP_DATE_RANGE_REQUIRES_ITEM_DELETION("TRIP_008", "error.trip_date_range_requires_item_deletion", 409),
     AI_FEEDBACK_ERROR("COMMON_012", "error.ai_feedback_error", 502),
     POST_NOT_FOUND("COMMUNITY_001", "error.post_not_found", 404),
     IMAGE_UPLOAD_FAILED("COMMON_010", "error.image_upload_failed", 500),
@@ -39,6 +45,7 @@ enum class ErrorCode(
     DUPLICATE_ORDER_REQUEST("ITINERARY_008", "error.duplicate_order_request", 400),
     CATEGORY_DAY_MISMATCH("ITINERARY_009", "error.category_day_mismatch", 400),
     PLACE_NOT_FOUND("ITINERARY_010", "error.place_not_found", 404),
+    WISHLIST_ITEM_LIKE_ALREADY_EXISTS("ITINERARY_011", "error.wishlist_item_like_already_exists", 409),
     EXTERNAL_API_ERROR("COMMON_011", "error.external_api_error", 502),
     EXCHANGE_RATE_NOT_FOUND("EXCHANGE_001", "error.exchange_rate_not_found", 404),
 

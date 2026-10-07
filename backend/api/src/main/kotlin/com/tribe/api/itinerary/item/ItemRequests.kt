@@ -3,6 +3,11 @@ package com.tribe.api.itinerary.item
 import com.tribe.application.itinerary.item.ItemCommand
 import java.time.LocalDateTime
 
+/**
+ * 일정 아이템 HTTP request 모델 경계.
+ *
+ * controller 입력 shape와 application command 변환 기준.
+ */
 object ItemRequests {
     data class CreateRequest(
         val visitDay: Int,
@@ -16,6 +21,21 @@ object ItemRequests {
             visitDay = visitDay,
             placeId = placeId,
             title = title,
+            time = time,
+            memo = memo,
+        )
+    }
+
+    data class CreateFromMemberWishlistRequest(
+        val memberWishlistItemId: Long,
+        val visitDay: Int,
+        val time: LocalDateTime? = null,
+        val memo: String? = null,
+    ) {
+        fun toCommand(tripId: Long): ItemCommand.CreateFromMemberWishlist = ItemCommand.CreateFromMemberWishlist(
+            tripId = tripId,
+            memberWishlistItemId = memberWishlistItemId,
+            visitDay = visitDay,
             time = time,
             memo = memo,
         )

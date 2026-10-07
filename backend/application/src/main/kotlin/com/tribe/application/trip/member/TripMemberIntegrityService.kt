@@ -14,6 +14,7 @@ import com.tribe.application.trip.event.TripRealtimeEventPublisher
 import com.tribe.application.trip.event.TripRealtimeEventType
 import com.tribe.domain.expense.ExpenseAssignment
 import com.tribe.domain.expense.ExpenseRepository
+import com.tribe.domain.itinerary.wishlist.WishlistItemLikeRepository
 import com.tribe.domain.itinerary.wishlist.WishlistItemRepository
 import com.tribe.domain.trip.core.Trip
 import com.tribe.domain.trip.member.TripMember
@@ -22,6 +23,11 @@ import com.tribe.domain.trip.member.TripRole
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
+/**
+ * 회원 use case 경계.
+ *
+ * 검증, 도메인 조회, 결과 조립 순서 보관.
+ */
 @Service
 @Transactional
 class TripMemberIntegrityService(
@@ -31,6 +37,7 @@ class TripMemberIntegrityService(
     private val tripRepository: TripRepository,
     private val expenseRepository: ExpenseRepository,
     private val wishlistItemRepository: WishlistItemRepository,
+    private val wishlistItemLikeRepository: WishlistItemLikeRepository,
 ) {
     fun deleteGuest(command: TripCommand.DeleteGuest): TripResult.TripDetail {
         tripAuthorizationPolicy.isTripAdmin(command.tripId)
@@ -80,6 +87,8 @@ class TripMemberIntegrityService(
             }
         }
 
+        wishlistItemLikeRepository.deleteByTripMemberId(guest.id)
+        wishlistItemLikeRepository.deleteByWishlistItemAdderId(guest.id)
         wishlistItemRepository.deleteByAdderId(guest.id)
         trip.members.remove(guest)
         tripRealtimeEventPublisher.publish(
@@ -101,6 +110,8 @@ class TripMemberIntegrityService(
         if (membership.role == TripRole.OWNER) {
             throw BusinessException(ErrorCode.NO_AUTHORITY_TRIP)
         }
+        wishlistItemLikeRepository.deleteByTripMemberId(membership.id)
+        wishlistItemLikeRepository.deleteByWishlistItemAdderId(membership.id)
         wishlistItemRepository.deleteByAdderId(membership.id)
         membership.role = TripRole.EXITED
         tripRealtimeEventPublisher.publish(
@@ -131,6 +142,8 @@ class TripMemberIntegrityService(
             throw BusinessException(ErrorCode.NO_AUTHORITY_TRIP)
         }
 
+        wishlistItemLikeRepository.deleteByTripMemberId(targetMembership.id)
+        wishlistItemLikeRepository.deleteByWishlistItemAdderId(targetMembership.id)
         wishlistItemRepository.deleteByAdderId(targetMembership.id)
         targetMembership.role = TripRole.KICKED
         tripRealtimeEventPublisher.publish(

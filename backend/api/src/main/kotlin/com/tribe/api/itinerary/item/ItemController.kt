@@ -15,6 +15,11 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
+/**
+ * 일정 아이템 HTTP 진입점.
+ *
+ * transport DTO와 application use case 연결 경계.
+ */
 @RestController
 @RequestMapping("/api/v1/trips/{tripId}/items")
 class ItemController(
@@ -26,6 +31,15 @@ class ItemController(
         @RequestBody request: ItemRequests.CreateRequest,
     ): ResponseEntity<ApiResponse<ItemResponses.ItemResponse>> {
         val result = itemService.createItem(request.toCommand(tripId))
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(ItemResponses.ItemResponse.from(result)))
+    }
+
+    @PostMapping("/from-member-wishlist")
+    fun createItemFromMemberWishlist(
+        @PathVariable tripId: Long,
+        @RequestBody request: ItemRequests.CreateFromMemberWishlistRequest,
+    ): ResponseEntity<ApiResponse<ItemResponses.ItemResponse>> {
+        val result = itemService.createItemFromMemberWishlist(request.toCommand(tripId))
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(ItemResponses.ItemResponse.from(result)))
     }
 

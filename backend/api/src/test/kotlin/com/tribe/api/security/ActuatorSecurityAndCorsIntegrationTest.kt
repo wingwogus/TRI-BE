@@ -26,6 +26,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
         "management.endpoint.health.probes.enabled=true",
         "management.endpoint.prometheus.enabled=true",
         "management.health.redis.enabled=false",
+        "management.health.mail.enabled=false",
         "spring.mail.username=test@example.com",
         "spring.mail.password=test-password"
     ]

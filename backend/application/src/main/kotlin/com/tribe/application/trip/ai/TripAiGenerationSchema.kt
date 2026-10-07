@@ -1,7 +1,7 @@
 package com.tribe.application.trip.ai
 
 object TripAiGenerationSchema {
-    fun schema(): Map<String, Any> = mapOf(
+    fun schema(minItemsPerDay: Int = TripAiGenerationPromptBuilder.MIN_ITEMS_PER_DAY): Map<String, Any> = mapOf(
         "type" to "object",
         "additionalProperties" to false,
         "properties" to mapOf(
@@ -38,7 +38,7 @@ object TripAiGenerationSchema {
                                 ),
                                 "required" to listOf("order", "time", "placeName", "searchQuery", "memo"),
                             ),
-                            "minItems" to TripAiGenerationPromptBuilder.MIN_ITEMS_PER_DAY,
+                            "minItems" to minItemsPerDay.coerceIn(TripAiGenerationPromptBuilder.MIN_ITEMS_PER_DAY, TripAiGenerationPromptBuilder.MAX_ITEMS_PER_DAY),
                             "maxItems" to TripAiGenerationPromptBuilder.MAX_ITEMS_PER_DAY,
                         ),
                     ),

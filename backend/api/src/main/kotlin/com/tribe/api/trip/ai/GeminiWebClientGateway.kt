@@ -10,6 +10,11 @@ import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientException
 import org.springframework.web.reactive.function.client.WebClientRequestException
 
+/**
+ * 여행 외부 adapter 경계.
+ *
+ * 외부 SDK/API 응답을 application port shape로 변환.
+ */
 @Component
 @ConditionalOnProperty(name = ["trip.review.ai.provider"], havingValue = "gemini", matchIfMissing = true)
 class GeminiWebClientGateway(

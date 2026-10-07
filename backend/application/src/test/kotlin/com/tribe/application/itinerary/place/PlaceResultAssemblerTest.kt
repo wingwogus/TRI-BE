@@ -25,6 +25,7 @@ class PlaceResultAssemblerTest {
         assertEquals(4.7, detailView.placeDetailSummary?.rating)
         assertEquals(128, detailView.placeDetailSummary?.userRatingCount)
         assertEquals("유명한 스시집", detailView.placeDetailSummary?.editorialSummary)
+        assertEquals(2, detailView.priceLevel)
     }
 
     @Test
@@ -40,6 +41,84 @@ class PlaceResultAssemblerTest {
         assertNull(assembler.toPlaceTypeSummary(place))
         assertNull(assembler.toNormalizedCategoryKey(place))
         assertNull(assembler.toDetailSummary(place))
+    }
+
+    @Test
+    fun `toSearchItem uses google search metadata when saved place is missing`() {
+        val openingSummary = OpeningSummary(
+            openNow = true,
+            nextOpenTime = null,
+            nextCloseTime = "2026-05-17T14:00:00+09:00",
+            source = OpeningSummarySource.CURRENT,
+            timezoneOffsetMinutes = 540,
+            syncedAt = null,
+            stale = false,
+        )
+
+        val item = assembler.toSearchItem(
+            hit = PlaceSearchGateway.SearchHit(
+                externalPlaceId = "google-place-1",
+                placeName = "Kiji",
+                address = "Osaka, Kita Ward, Umeda",
+                latitude = 34.7,
+                longitude = 135.49,
+                primaryType = "japanese_restaurant",
+                types = listOf("japanese_restaurant", "restaurant"),
+                businessStatus = "OPERATIONAL",
+                rating = 4.5,
+                userRatingCount = 235,
+                openingSummary = openingSummary,
+            ),
+            savedPlace = null,
+        )
+
+        assertNull(item.placeId)
+        assertEquals(NormalizedPlaceCategoryKey.JAPANESE_FOOD, item.normalizedCategoryKey)
+        assertEquals("OPERATIONAL", item.placeDetailSummary?.businessStatus)
+        assertEquals(4.5, item.placeDetailSummary?.rating)
+        assertEquals(235, item.placeDetailSummary?.userRatingCount)
+        assertEquals(openingSummary, item.openingSummary)
+    }
+
+    @Test
+    fun `toNearbySearchItem keeps saved place id but omits heavy fields`() {
+        val savedPlace = placeFixture()
+        savedPlace.detailSnapshot?.primaryPhotoName = "places/place-1/photos/1"
+        val hitOpeningSummary = OpeningSummary(
+            openNow = true,
+            nextOpenTime = null,
+            nextCloseTime = "2026-05-17T14:00:00+09:00",
+            source = OpeningSummarySource.CURRENT,
+            timezoneOffsetMinutes = 540,
+            syncedAt = null,
+            stale = false,
+        )
+
+        val item = assembler.toNearbySearchItem(
+            hit = PlaceSearchGateway.SearchHit(
+                externalPlaceId = "place-1",
+                placeName = "Nearby Cafe",
+                address = "Tokyo",
+                latitude = 35.6812,
+                longitude = 139.7671,
+                primaryType = "cafe",
+                types = listOf("cafe", "food"),
+                businessStatus = "OPERATIONAL",
+                rating = 4.8,
+                userRatingCount = 321,
+                editorialSummary = "Crowded cafe.",
+                openingSummary = hitOpeningSummary,
+            ),
+            savedPlace = savedPlace,
+        )
+
+        assertEquals(10L, item.placeId)
+        assertEquals("place-1", item.externalPlaceId)
+        assertEquals("cafe", item.placeTypeSummary?.primaryType)
+        assertEquals(NormalizedPlaceCategoryKey.CAFE, item.normalizedCategoryKey)
+        assertNull(item.photoHint)
+        assertNull(item.placeDetailSummary)
+        assertNull(item.openingSummary)
     }
 
     private fun placeFixture(): Place {
@@ -58,6 +137,7 @@ class PlaceResultAssemblerTest {
             place = place,
             rating = 4.7,
             userRatingCount = 128,
+            priceLevel = 2,
             editorialSummary = "유명한 스시집",
         )
         return place

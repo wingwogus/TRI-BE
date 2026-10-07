@@ -1,4 +1,4 @@
-import {Globe, LogIn, LogOut, Plus, User} from "lucide-react";
+import {Globe, Heart, LayoutDashboard, LogIn, LogOut, Plus, User} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {useLocation, useNavigate} from "react-router-dom";
 import {
@@ -10,7 +10,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
-import {MemberResponse} from "@/api/auth";
+import type {MemberResponse} from "@/api/auth";
+import {cn} from "@/lib/utils";
 
 interface HeaderProps {
   isLoggedIn: boolean;
@@ -19,6 +20,7 @@ interface HeaderProps {
   onLogoutClick: () => void;
   onJoinTripClick: () => void;
   onEditNicknameClick: () => void;
+  showJoinTripAction?: boolean;
 }
 
 export const Header = ({
@@ -28,9 +30,30 @@ export const Header = ({
   onLogoutClick,
   onJoinTripClick,
   onEditNicknameClick,
+  showJoinTripAction = true,
 }: HeaderProps) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const navItems = [
+    {
+      label: "대시보드",
+      path: "/",
+      Icon: LayoutDashboard,
+      isActive: location.pathname === "/",
+    },
+    {
+      label: "커뮤니티",
+      path: "/community",
+      Icon: Globe,
+      isActive: location.pathname.startsWith("/community") || location.pathname.startsWith("/post"),
+    },
+    {
+      label: "내 위시",
+      path: "/my-wishlist",
+      Icon: Heart,
+      isActive: location.pathname.startsWith("/my-wishlist"),
+    },
+  ];
   
   return (
     <header className="bg-white shadow-soft">
@@ -42,28 +65,29 @@ export const Header = ({
           </div>
 
           <div className="flex items-center gap-2 md:gap-3">
-            {location.pathname.startsWith('/community') || location.pathname.startsWith('/post') ? (
+            <nav className="flex items-center rounded-full bg-slate-100 p-1" aria-label="주요 화면">
+              {navItems.map(({label, path, Icon, isActive}) => (
+                <Button
+                  key={path}
+                  type="button"
+                  variant="ghost"
+                  aria-label={label}
+                  aria-current={isActive ? "page" : undefined}
+                  onClick={() => navigate(path)}
+                  size="sm"
+                  className={cn(
+                    "h-9 rounded-full px-2.5 text-slate-600 hover:bg-white hover:text-slate-950 md:px-3",
+                    isActive && "bg-white font-bold text-primary shadow-sm hover:bg-white hover:text-primary",
+                  )}
+                >
+                  <Icon className="h-4 w-4 md:mr-2" />
+                  <span className="hidden md:inline">{label}</span>
+                </Button>
+              ))}
+            </nav>
+            {isLoggedIn && showJoinTripAction && (
               <Button 
-                variant="ghost"
-                onClick={() => navigate('/')}
-                size="sm"
-              >
-                <Globe className="w-4 h-4 md:mr-2" />
-                <span className="hidden md:inline">나의 여행</span>
-              </Button>
-            ) : (
-              <Button 
-                variant="ghost"
-                onClick={() => navigate('/community')}
-                size="sm"
-              >
-                <Globe className="w-4 h-4 md:mr-2" />
-                <span className="hidden md:inline">커뮤니티</span>
-              </Button>
-            )}
-            {isLoggedIn && (
-              <Button 
-                className="bg-gradient-primary hover:shadow-primary transition-all duration-300"
+                className="rounded-full bg-primary px-4 text-primary-foreground shadow-primary transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-[0_14px_34px_-18px_rgba(37,99,235,0.65)]"
                 onClick={onJoinTripClick}
                 size="sm"
               >
@@ -109,7 +133,11 @@ export const Header = ({
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button onClick={onLoginClick} size="sm">
+              <Button
+                onClick={onLoginClick}
+                size="sm"
+                className="rounded-full bg-primary px-4 text-primary-foreground shadow-primary transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-[0_14px_34px_-18px_rgba(37,99,235,0.65)]"
+              >
                 <LogIn className="w-4 h-4 md:mr-2" />
                 <span className="hidden md:inline">로그인</span>
               </Button>
