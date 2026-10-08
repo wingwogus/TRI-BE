@@ -77,3 +77,35 @@ Runs with the application-local profile by default.
 
 ⭐ Official Method: Gradle bootRun
 ./gradlew :api:bootRun
+
+## Local AI generation test
+
+The AI frontend worktree uses port `8082`; this local API uses `8083` to avoid an IntelliJ port conflict.
+Requires Java 21, Redis, and Ollama. The local script uses `gemma3:4b` by default; override with `OLLAMA_MODEL` for another installed model.
+
+Start Ollama and Redis in separate terminals:
+
+```bash
+OLLAMA_CONTEXT_LENGTH=8192 OLLAMA_NUM_PARALLEL=1 ollama serve
+redis-server --bind 127.0.0.1 --port 6381 --save '' --appendonly no
+```
+
+Download the model once, then start the API from `backend/`:
+
+```bash
+ollama pull gemma3:4b
+bash scripts/run-local-ai.sh
+```
+
+Set these values in `frontend/.env.development.local`, then run `npm run dev -- --host 127.0.0.1 --port 8082 --strictPort` from `frontend/`:
+
+```dotenv
+VITE_API_BASE_URL=http://localhost:8083/api/v1
+VITE_BACKEND_ORIGIN=http://localhost:8083
+```
+
+Open `http://localhost:8082` and log in with `seed.owner@tribe.local` / `password`.
+The script always uses an isolated in-memory H2 database and enables the existing seed accounts; restarting the API resets local trips and proposals.
+Choose **AI 여행 만들기**, enter a region, 1–5 days, companion type, and 1–3 styles, then generate and apply the proposal.
+If `GOOGLE_KEY` is absent, Google Places lookup is disabled for this local run. Leave **지도에서 찾지 못한 장소도 텍스트 일정으로 저장** checked to test actual AI generation and itinerary persistence without map matching.
+Ollama model setup follows the [official CLI documentation](https://docs.ollama.com/cli).

@@ -134,6 +134,8 @@ data class RouteDetails(
     val destinationPlace: PlaceSearchGateway.SearchHit,
     val totalDuration: String,
     val totalDistance: String,
+    val totalDurationSeconds: Long? = null,
+    val totalDistanceMeters: Long? = null,
     val steps: List<RouteStep>,
 ) {
     data class RouteStep(

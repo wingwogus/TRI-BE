@@ -34,6 +34,7 @@ class TripReviewService(
     private val placeSearchService: PlaceSearchService,
     private val placeCatalogService: com.tribe.application.itinerary.place.PlaceCatalogService,
     private val recommendedPlaceRepository: RecommendedPlaceRepository,
+    private val routeOptimizationService: TripRouteOptimizationService,
 ) {
     @PreAuthorize("@tripAuthorizationPolicy.isTripMember(#tripId)")
     fun createReview(tripId: Long, command: TripReviewCommand.Create): TripReviewResult.ReviewDetail {
@@ -48,7 +49,7 @@ class TripReviewService(
         parseAndRetrievePlaces(placePart, trip.country.code, TripRegion.from(trip.regionCode)).forEach {
             recommendedPlaceRepository.save(RecommendedPlace.from(it, review))
         }
-        return TripReviewResult.ReviewDetail.from(review)
+        return TripReviewResult.ReviewDetail.from(review, routeOptimizationService.preview(trip))
     }
 
     @PreAuthorize("@tripAuthorizationPolicy.isTripMember(#tripId)")
@@ -63,7 +64,9 @@ class TripReviewService(
         val review = tripReviewRepository.findTripReviewWithRecommendedPlacesById(reviewId)
             ?: throw BusinessException(ErrorCode.TRIP_REVIEW_NOT_FOUND)
         if (review.trip.id != tripId) throw BusinessException(ErrorCode.TRIP_NOT_FOUND)
-        return TripReviewResult.ReviewDetail.from(review)
+        val trip = tripRepository.findTripWithFullItineraryById(tripId)
+            ?: throw BusinessException(ErrorCode.TRIP_NOT_FOUND)
+        return TripReviewResult.ReviewDetail.from(review, routeOptimizationService.preview(trip))
     }
 
     private fun parseAndRetrievePlaces(

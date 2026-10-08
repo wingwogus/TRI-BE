@@ -105,6 +105,25 @@ class PlaceCatalogService(
         return results.map { result -> placeResultAssembler.toSearchItem(result, existingMap[result.externalPlaceId]) }
     }
 
+    fun getOrCreate(
+        externalPlaceId: String,
+        placeName: String,
+        address: String?,
+        latitude: BigDecimal,
+        longitude: BigDecimal,
+    ): Place = placeRepository.findByExternalPlaceId(externalPlaceId) ?: createPlaceOrFindConcurrent(
+        externalPlaceId = externalPlaceId,
+        placeName = placeName,
+        address = address,
+        latitude = latitude,
+        longitude = longitude,
+    ).let(::findManagedPlace)
+
+    fun mergeWithCanonical(results: List<PlaceSearchGateway.SearchHit>): List<PlaceResult.SearchItem> {
+        val existingMap = findExistingPlaces(results)
+        return results.map { result -> placeResultAssembler.toSearchItem(result, existingMap[result.externalPlaceId]) }
+    }
+
     fun mergeNearbyWithSavedPlaces(results: List<PlaceSearchGateway.SearchHit>): List<PlaceResult.SearchItem> {
         // 주변 후보는 내부 placeId/type만 얇게 병합하고 상세/사진/영업시간 조립은 건너뛴다.
         val existingMap = findExistingPlaces(results)
