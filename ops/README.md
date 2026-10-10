@@ -21,7 +21,7 @@ Runtime contract:
 Recommended flow:
 1. Build and push the backend image from the app repo CI.
 2. Argo CD syncs `ops/helm/tribe-api`.
-3. Image Updater writes the promoted image tag back into `ops/helm/tribe-api/values-prod.yaml`.
+3. Image Updater currently writes the selected image tag back into `ops/helm/tribe-api/values.yaml` on `main`. This direct Git write-back conflicts with the proposed no-bypass branch protection; see `docs/runbooks/git-flow.md` before enabling that protection.
 4. Prometheus scrapes the backend management port through the generated `ServiceMonitor`.
 
 Notes:
